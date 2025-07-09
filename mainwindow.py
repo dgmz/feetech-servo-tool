@@ -46,11 +46,27 @@ class MainWindow(QMainWindow):
 		self.setIntRangeLineEdit(self.ui.upLimitLineEdit, 0, 1_200)
 		self.setIntRangeLineEdit(self.ui.downLimitLineEdit, 0, 1_200)
 
+		self.mode_ = "WRITE"
 		self.is_searching_ = False
 		self.sweep_running_ = False
 		self.step_running_ = False
 		self.step_increase_ = False
-		self.mode_ = "WRITE"
+		self.latest_auto_debug_goal_ = 0
+		self.is_recording_ = False
+		self.file_write_interval_ = 0
+		self.record_data_count_ = 0
+		self.record_file_name_ = None
+		self.record_section_data = ""
+		self.is_mem_writing = False
+		self.latest_status = {
+			"pos": 0,
+			"goal": 0,
+			"torque": 0,
+			"speed": 0,
+			"current": 0,
+			"temp": 0,
+			"voltage": 0,
+		}
 
 	def isServoValidNow(self):
 		return not (self.is_searching_ or not self.serial_.isOpen() or
@@ -449,20 +465,80 @@ class MainWindow(QMainWindow):
 			self.auto_debug_timer.stop()
 	
 	def onExportButtonClicked(self):
-		print("export button clicked")
-		pass
+		if not self.isServoValidNow():
+			return
+
+		if self.is_recording_:
+			self.is_recording_ = False
+			self.ui.exportPushButton.setText("Export")
+			self.ui.clearPushButton.setNabled(True)
+
+			if self.record_section_data_:
+				# FIXME: handle exceptions
+				with open(self.record_file_name_, "a") as file:
+					file.write(self.record_section_data_)
+			self.ui.recSizeLineEdit.setText(self.record_data_count_)
+		else:
+			self.is_recording_ = True
+			self.ui.exportPushButton.setText("Stop")
+			self.ui.clearPushButton.setEnabled(False)
+			self.record_section_data_ = ""
+			self.record_data_count_ = 0
+			rec_time = int(self.ui.recTimeLineEdit().text())
+			self.file_write_interval_ = max(1, rec_time)
+			file_name = self.ui.recFileNameLineEdit.text()
+			self.record_file_name_ = os.path.expanduser(file_name)
+			#FIXME: handle exceptions
+			with open(self.record_file_name_, "w") as file:
+				#FIXME: column headers should be
+				# "No,Pos,Goal,Torque,Speed,Current,Temp,Voltage"
+				file.write("No,Pos,Gol,Ft,V,C,T,Vol\n")
 		
 	def onClearButtonClicked(self):
-		print("clear button clicked")
-		pass
+		self.record_data_count_ = 0
+		self.record_section_data_ = ""
+		self.ui.recSizeLineEdit.setText(self.record_data_count_)
 	
 	def onDataAnalysisTimerTimeout(self):
-		#print("data analysis timer timeout")
-		pass
+		if not self.isServoValidNow():
+			return
 
+		if not self.is_recording_:
+			return
+
+		self.record_data_count += 1
+		line = ",".join([str(self.record_data_count_),
+			str(self.latest_status_["pos"]),
+			str(self.latest_status_["goal"]),
+			str(self.latest_status_["torque"]),
+			str(self.latest_status_["speed"]),
+			str(self.latest_status_["current"]),
+			str(self.latest_status_["temp"]),
+			str(self.latest_status_["voltage"]),
+			"END")
+		self.record_section_data_ += line + "\n"
+		section_size = 20 * self.file_write_interval_ # FIXME: magic number
+
+		if self.record_data_count_ % section_size == 0:
+			# FIXME: handle exceptions
+			with open(self.record_file_name_, "a") as file:
+				file.write(self.record_section_data_)
+			self.record_section_data_ = ""
+			self.ui.recSizeLineEdit.setText(str(self.record_data_count_))
+		
 	def onProgTimerTimeout(self):
-		#print("prog timer timeout")
-		pass
+		if self.ui.tabWidget.currentIndex() != 1:
+			return
+			
+		if not self.isServoValidNow():
+			return
+
+		if self.is_mem_writing_:
+			return
+
+		firstVisibleRow = self.ui.memoryTableView.indexAt(self.ui.memoryTableView.viewport().rect().topLeft().row()
+		lastVisibleRow = self.ui.memoryTableView.indexAt(self.ui.memoryTableView.viewport().rect().bottomLeft().row()
+		
 		
 	def onMemoryTableSelection(self):
 		print("memory table selection")
