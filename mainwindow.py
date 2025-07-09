@@ -435,10 +435,10 @@ class MainWindow(QMainWindow):
 
 			if end < self.latest_auto_debug_goal_:
 				self.latest_auto_debug_goal_ = end
-				self.step_increase = False
+				self.step_increase_ = False
 			elif self.latest_auto_debug_goal_ < start:
 				self.latest_auto_debug_goal_ = start
-				self.step_increase = True
+				self.step_increase_ = True
 
 			if self.select_servo_.model_ == "SCS":
 				self.scs_serial_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
