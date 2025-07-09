@@ -10,7 +10,7 @@ I32_MAX = 2 ** 31 - 1
 def mkitem(x):
 	return QtGui.QStandardItem(str(x))
 
-class SCSerial:
+class ServoBus:
 	def set_timeout(self, t):
 		pass
 		
@@ -26,6 +26,44 @@ class SCSerial:
 
 	def set_end(self, end):
 		pass
+
+	def read_byte(self, id, address):
+		pass
+
+	def read_word(self, id, address):
+		pass
+
+	def write_byte(self, id, address, value):
+		pass
+
+	def write_word(self, id, address, value):
+		pass
+
+class ServoProtocol:
+	def __init__(self):
+		pass
+	def enable_torque(self, id, enable):
+		pass
+	def rotation_mode(self, id):
+		pass
+	def write_pos_ex(self, id, goal, zero1, zero2):
+		pass
+	def read_position(self, id):
+		return 2000
+	def read_load(self, id):
+		return 100
+	def read_speed(self, id):
+		return 200
+	def read_current(self, id):
+		return 300
+	def read_temperature(self, id):
+		return 400
+	def read_voltage(self, id):
+		return 600
+	def read_move(self, id):
+		return 1
+	def read_goal(self, id):
+		return 700
 
 class MainWindow(QMainWindow):
 	def __init__(self, parent=None):
@@ -43,7 +81,10 @@ class MainWindow(QMainWindow):
 		self.graph_timer_.start(30)
 		#serial port
 		self.serial_ = QtSerialPort.QSerialPort(self)
-		self.scserial_ = SCSerial() # TODO init API
+		self.servo_bus_ = ServoBus() # TODO init API
+		
+		self.sms_sts_proto_ = ServoProtocol()
+		self.scs_proto_ = ServoProtocol()
 
 		self.setupComSettings()
 		self.setupServoList()
@@ -225,9 +266,9 @@ class MainWindow(QMainWindow):
 	
 	def selectServorSeries(self, series):
 		if series == "SCS":
-			self.scserial_.set_end(1)
+			self.servo_bus_.set_end(1)
 		else:
-			self.scserial_.set_end(0)
+			self.servo_bus_.set_end(0)
 		self.select_servo_.model_ = series
 		self.updateProgMemTable()
 	
@@ -279,7 +320,7 @@ class MainWindow(QMainWindow):
 				self.setEnableComSettings(False)
 			else:
 				self.ui.ComOpenButton.setText("Open")
-			self.scserial_.set_timeout(int(self.ui.timeoutLineEdit.text()))
+			self.servo_bus_.set_timeout(int(self.ui.timeoutLineEdit.text()))
 	
 	def onSearchButtonClicked(self):
 		if not self.serial_.isOpen():
@@ -314,9 +355,9 @@ class MainWindow(QMainWindow):
 			self.ui.ServoSearchText.setText("Stop")
 		else:
 			self.ui.ServoSearchText.setText(f"Ping ID:{self.search_id_} Servo...")
-			ret = self.scserial_.ping(self.search_id_)
+			ret = self.servo_bus_.ping(self.search_id_)
 			if 0 < ret:
-				mid = self.scserial_.read_model_number(ret)
+				mid = self.servo_bus_.read_model_number(ret)
 				name = servo.getModelType(mid)
 				self.appendServoList(ret, name)
 				self.id_list_ += [ret]
@@ -328,7 +369,7 @@ class MainWindow(QMainWindow):
 		selectedRows = self.ui.ServoListView.selectionModel().selectedRows()
 		row = selectedRows[0].row()
 		index = self.servo_list_model_.index(row, 0)
-		self.select_servo.id_ = int(self.servo_list_model_.data(index))
+		self.select_servo_.id_ = int(self.servo_list_model_.data(index))
 		index = self.servo_list_model_.index(row, 1)
 		self.selectServorSeries(servo.getModelSeries(str(self.servo_list_model_.data(index))))
 	
@@ -368,9 +409,9 @@ class MainWindow(QMainWindow):
 			return
 
 		if self.select_servo_.model_ == "SCS":
-			self.scs_serial_.enable_torque(self.select_servo_.id_, self.ui.torqueEnableCheckbox.isChecked())
+			self.scs_proto_.enable_torque(self.select_servo_.id_, self.ui.torqueEnableCheckbox.isChecked())
 		else:
-			self.sms_sts_serial_.enable_torque(self.select_servo_.id_, self.ui.torqueEnableCheckbox.isChecked())
+			self.sms_sts_proto_.enable_torque(self.select_servo_.id_, self.ui.torqueEnableCheckbox.isChecked())
 
 	def onModeRadioButtonsToggled(self, checked):
 		if checked:
@@ -388,7 +429,7 @@ class MainWindow(QMainWindow):
 			return
 
 		if self.mode_ == "REG_WRITE":
-			self.scserial_.reg_write_action(self.select_servo_.id_)
+			self.servo_bus_.reg_write_action(self.select_servo_.id_)
 
 	def onSweepButtonClicked(self):
 		if not self.isServoValidNow():
@@ -406,10 +447,10 @@ class MainWindow(QMainWindow):
 			self.latest_auto_debug_goal_ = int(self.ui.startLineEdit.text())
 
 			if self.select_servo_.model_ == "SCS":
-				self.scs_serial_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
+				self.scs_proto_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			else:
-				self.sms_sts_serial_.rotation_mode(self.select_servo_.id_)
-				self.sms_sts_serial_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
+				self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
+				self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			self.auto_debug_timer_.start(int(self.ui.sweepLineEdit.text()))
 	
 	def onStepButtonClicked(self):
@@ -428,10 +469,10 @@ class MainWindow(QMainWindow):
 			self.ui.sweepButton.setEnabled(False)
 			self.latest_auto_debug_goal_ = int(self.ui.startLineEdit.text())
 			if self.select_servo_.model_ == "SCS":
-				self.scs_serial_.write_pos(select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
+				self.scs_proto_.write_pos(select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			else:
-				self.sms_sts_serial_.rotation_mode(self.select_servo_.id_)
-				self.sms_sts_serial_.write_pos(select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
+				self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
+				self.sms_sts_proto_.write_pos(select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			self.auto_debug_timer.start(int(self.ui.stepDelayLineEdit.text()))
 		
 	def onAutoDebugTimerTimeout(self):
@@ -453,10 +494,10 @@ class MainWindow(QMainWindow):
 			else:
 				self.latest_auto_debug_goal_ = start
 			if self.select_servo_.model_ == "SCS":
-				self.scs_serial_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
+				self.scs_proto_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			else:
-				self.sms_sts_serial_.rotation_mode(self.select_servo_.id_)
-				self.sms_sts_serial_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
+				self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
+				self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 		elif self.step_running_:
 			start = int(self.ui.startLineEdit.text())
 			end = int(self.ui.endLineEdit.text())
@@ -472,10 +513,10 @@ class MainWindow(QMainWindow):
 				self.step_increase_ = True
 
 			if self.select_servo_.model_ == "SCS":
-				self.scs_serial_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
+				self.scs_proto_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			else:
-				self.sms_sts_serial_.rotation_mode(self.select_servo_.id_)
-				self.sms_sts_serial_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
+				self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
+				self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 		else:
 			self.auto_debug_timer.stop()
 	
@@ -551,17 +592,17 @@ class MainWindow(QMainWindow):
 		if self.is_mem_writing_:
 			return
 
-		firstVisibleRow = self.ui.memoryTableView.indexAt(self.ui.memoryTableView.viewport().rect().topLeft().row())
-		lastVisibleRow = self.ui.memoryTableView.indexAt(self.ui.memoryTableView.viewport().rect().bottomLeft().row())
+		firstVisibleRow = self.ui.memoryTableView.indexAt(self.ui.memoryTableView.viewport().rect().topLeft()).row()
+		lastVisibleRow = self.ui.memoryTableView.indexAt(self.ui.memoryTableView.viewport().rect().bottomLeft()).row()
 		if firstVisibleRow != -1 and lastVisibleRow != -1:
-			mem_config = self.getMemConfig(select_servo_.model_)
+			mem_config = self.getMemConfig(self.select_servo_.model_)
 			for i in range(firstVisibleRow, lastVisibleRow + 1):
 				(address, _, size, _, _, _, _, _, _) = mem_config[i]
 				val = 0
 				if size == 2:
-					val = self.scserial_.read_word(select_servo_.id_, address)
+					val = self.servo_bus_.read_word(self.select_servo_.id_, address)
 				else:
-					val = self.scserial_.read_byte(select_servo_.id_, address)
+					val = self.servo_bus_.read_byte(self.select_servo_.id_, address)
 
 				model = self.ui.memoryTableView.model()
 				model.setData(model.index(i,2), str(val))
@@ -581,24 +622,24 @@ class MainWindow(QMainWindow):
 		
 	def onMemSetButtonClicked(self):
 		self.is_mem_writing_ = True
-		selectedRows = self.ui.memoryTableView.selectionModel().slectedRows()
+		selectedRows = self.ui.memoryTableView.selectionModel().selectedRows()
 		mem_config = self.getMemConfig(self.select_servo_.model_)
 		(address, name, size, default_value, dir_bit, is_eprom, is_readonly, min_val, max_val) = mem_config[selectedRows[0].row()]
 
 		# TODO No address reference
 		if address == 5:
 			# TODO: Support non-STS servos
-			val = int(ui.memSetLineEdit.text())
-			self.scserial.write_byte(self.select_servo_.id_, 55, 0) // unlock
-			self.scserial.write_byte(self.select_servo_.id_, address, val)
-			self.scserial.write_byte(self.select_servo_.id_, 55, 1) // lock
-			select_servo_.id_ = val
+			val = int(self.ui.memSetLineEdit.text())
+			self.servo_bus_.write_byte(self.select_servo_.id_, 55, 0) # unlock
+			self.servo_bus_.write_byte(self.select_servo_.id_, address, val)
+			self.servo_bus_.write_byte(self.select_servo_.id_, 55, 1) # lock
+			self.select_servo_.id_ = val
 		# FIXME: else missing?
 		val = int(self.ui.memSetLineEdit.text())
 		if size == 2:
-			self.scserial_.write_word(self.select_servo_.id_, address, val)
+			self.servo_bus_.write_word(self.select_servo_.id_, address, val)
 		else:
-			self.scserial_.write_byte(self.select_servo_.id_, address, val)
+			self.servo_bus_.write_byte(self.select_servo_.id_, address, val)
 		self.is_mem_writing_ = False
 		
 	def onGraphTimerTimeout(self):
@@ -615,7 +656,7 @@ class MainWindow(QMainWindow):
 		self.ui.speedLabel.setText(str(self.latest_status_["speed"]))
 		self.ui.currentLabel.setText(str(self.latest_status_["current"]))
 		self.ui.temperatureLabel.setText(str(self.latest_status_["temp"]))
-		self.ui.voltageLabel.setText("%.1fV" % self.latest_status_["voltage"] * 0.1)
+		self.ui.voltageLabel.setText("%.1fV" % (self.latest_status_["voltage"] * 0.1))
 		self.ui.movingLabel.setText(str(self.latest_status_["move"]))
 		self.ui.goalLabel.setText(str(self.latest_status_["goal"]))
 
@@ -634,16 +675,16 @@ class MainWindow(QMainWindow):
 		if self.isServoValidNow():
 			if self.select_servo_.model_ == "SCS":
 				if count == 0:
-					self.latest_status_["pos"] = self.scs_serial_.read_position(self.select_servo_.id_)
-					self.latest_status_["torque"] = self.scs_serial_.read_load(self.select_servo_.id_)
+					self.latest_status_["pos"] = self.scs_proto_.read_position(self.select_servo_.id_)
+					self.latest_status_["torque"] = self.scs_proto_.read_load(self.select_servo_.id_)
 				elif count == 1:
-					self.latest_status_["speed"] = self.scs_serial_.read_spedc(self.select_servo_.id_)
-					self.latest_status_["current"] = self.scs_serial_.read_current(self.select_servo_.id_)
+					self.latest_status_["speed"] = self.scs_proto_.read_speed(self.select_servo_.id_)
+					self.latest_status_["current"] = self.scs_proto_.read_current(self.select_servo_.id_)
 				elif count == 2:
-					self.latest_status_["temp"] = self.scs_serial_.read_temperature(self.select_servo_.id_)
-					self.latest_status_["voltage"] = self.scs_serial_.read_voltage(self.select_servo_.id_)
-					self.latest_status_["move"] = self.scs_serial_.read_move(self.select_servo_.id_)
-					self.latest_status_["goal"] = self.scs_serial_.read_goal(self.select_servo_.id_)
+					self.latest_status_["temp"] = self.scs_proto_.read_temperature(self.select_servo_.id_)
+					self.latest_status_["voltage"] = self.scs_proto_.read_voltage(self.select_servo_.id_)
+					self.latest_status_["move"] = self.scs_proto_.read_move(self.select_servo_.id_)
+					self.latest_status_["goal"] = self.scs_proto_.read_goal(self.select_servo_.id_)
 					self.ui.graphWidget.append_data(self.lates_status_['pos'],
 						self.latest_status_['torque'],
 						self.latest_status_['speed'],
@@ -652,16 +693,16 @@ class MainWindow(QMainWindow):
 						self.latest_status_['voltage'])
 			else:
 				if count == 0:
-					self.latest_status_["pos"] = self.sms_sts_serial_.read_position(self.select_servo_.id_)
-					self.latest_status_["torque"] = self.sms_sts_serial_.read_load(self.select_servo_.id_)
+					self.latest_status_["pos"] = self.sms_sts_proto_.read_position(self.select_servo_.id_)
+					self.latest_status_["torque"] = self.sms_sts_proto_.read_load(self.select_servo_.id_)
 				elif count == 1:
-					self.latest_status_["speed"] = self.sms_sts_serial_.read_spedc(self.select_servo_.id_)
-					self.latest_status_["current"] = self.sms_sts_serial_.read_current(self.select_servo_.id_)
-					self.latest_status_["temp"] = self.sms_sts_serial_.read_temperature(self.select_servo_.id_)
+					self.latest_status_["speed"] = self.sms_sts_proto_.read_speed(self.select_servo_.id_)
+					self.latest_status_["current"] = self.sms_sts_proto_.read_current(self.select_servo_.id_)
+					self.latest_status_["temp"] = self.sms_sts_proto_.read_temperature(self.select_servo_.id_)
 				elif count == 2:
-					self.latest_status_["voltage"] = self.sms_sts_serial_.read_voltage(self.select_servo_.id_)
-					self.latest_status_["move"] = self.sms_sts_serial_.read_move(self.select_servo_.id_)
-					self.latest_status_["goal"] = self.sms_sts_serial_.read_goal(self.select_servo_.id_)
+					self.latest_status_["voltage"] = self.sms_sts_proto_.read_voltage(self.select_servo_.id_)
+					self.latest_status_["move"] = self.sms_sts_proto_.read_move(self.select_servo_.id_)
+					self.latest_status_["goal"] = self.sms_sts_proto_.read_goal(self.select_servo_.id_)
 					self.ui.graphWidget.append_data(self.lates_status_['pos'],
 						self.latest_status_['torque'],
 						self.latest_status_['speed'],
