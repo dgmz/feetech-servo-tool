@@ -24,7 +24,7 @@ class Series:
 		return points
 
 
-class SimpeGraphWiget(QWidget):
+class SimpleGraphWidget(QWidget):
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -131,7 +131,7 @@ if __name__ == "__main__":
 		def __init__(self):
 			super().__init__()
 			self.setWindowTitle("Hello from PyQt6")
-			self.graph = SimpeGraphWiget()
+			self.graph = SimpleGraphWidget()
 			self.graph.series["pos"].visible = True
 			self.graph.series["torque"].visible = True
 			self.graph.series["speed"].visible = True

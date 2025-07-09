@@ -166,7 +166,7 @@
      <attribute name="title">
       <string>Debug</string>
      </attribute>
-     <widget class="SimpeGraphWiget" name="graphWidget" native="true">
+     <widget class="SimpleGraphWidget" name="graphWidget" native="true">
       <property name="geometry">
        <rect>
         <x>10</x>
@@ -1201,9 +1201,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>SimpeGraphWiget</class>
+   <class>SimpleGraphWidget</class>
    <extends>QWidget</extends>
-   <header>simpegraphwiget.h</header>
+   <header>simplegraphwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -75,7 +75,7 @@ class Ui_MainWindow(object):
         self.tabWidget.setObjectName("tabWidget")
         self.DebugTab = QtWidgets.QWidget()
         self.DebugTab.setObjectName("DebugTab")
-        self.graphWidget = SimpeGraphWiget(parent=self.DebugTab)
+        self.graphWidget = SimpleGraphWidget(parent=self.DebugTab)
         self.graphWidget.setGeometry(QtCore.QRect(10, 10, 601, 351))
         self.graphWidget.setObjectName("graphWidget")
         self.groupBox_3 = QtWidgets.QGroupBox(parent=self.DebugTab)
@@ -569,4 +569,4 @@ class Ui_MainWindow(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.ProgrammingTab), _translate("MainWindow", "Programming"))
         self.ServoListGroup.setTitle(_translate("MainWindow", "Servo List"))
         self.SearchButton.setText(_translate("MainWindow", "Search"))
-from simpegraphwiget import SimpeGraphWiget
+from simplegraphwidget import SimpleGraphWidget
