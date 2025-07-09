@@ -56,9 +56,9 @@ class MainWindow(QMainWindow):
 		self.file_write_interval_ = 0
 		self.record_data_count_ = 0
 		self.record_file_name_ = None
-		self.record_section_data = ""
-		self.is_mem_writing = False
-		self.latest_status = {
+		self.record_section_data_ = ""
+		self.is_mem_writing_ = False
+		self.latest_status_ = {
 			"pos": 0,
 			"goal": 0,
 			"torque": 0,
@@ -66,6 +66,7 @@ class MainWindow(QMainWindow):
 			"current": 0,
 			"temp": 0,
 			"voltage": 0,
+			"move": 0
 		}
 
 	def isServoValidNow(self):
@@ -538,19 +539,120 @@ class MainWindow(QMainWindow):
 
 		firstVisibleRow = self.ui.memoryTableView.indexAt(self.ui.memoryTableView.viewport().rect().topLeft().row()
 		lastVisibleRow = self.ui.memoryTableView.indexAt(self.ui.memoryTableView.viewport().rect().bottomLeft().row()
-		
+		if (firstVisibleRow != -1 and lastVisibleRow != -1:
+			mem_config = self.getMemConfig(select_servo_.model_)
+			for i in range(firstVisibleRow, lastVisibleRow + 1):
+				(address, _, size, _, _, _, _, _, _) = mem_config[i]
+				val = 0
+				if size == 2:
+					val = self.scserial_.read_word(select_servo_.id_, address)
+				else:
+					val = self.scserial_.read_byte(select_servo_.id_, address)
+
+				model = self.ui.memoryTableView.model()
+				model.setData(model.index(i,2), str(val))
 		
 	def onMemoryTableSelection(self):
-		print("memory table selection")
-		pass
+		selectedRows = self.ui.memoryTableView.selectionModel().selectedRows()
+		row = selectedRows.first().row()
+		mem = self.prog_mem_model_
+		index = mem.index(row, 1)
+		self.ui.memLabel.setText(str(mem.data(index)))
+		index = mem.index(row, 2)
+		self.ui.memSetLineEdit.setText(str(mem.data(index)))
+		mem_config = self.getMemConfig(self.select_servo_.model_)
+		is_readonly = mem_config[row].is_readonly
+		self.ui.memSetLineEdit.setEnable(not is_readonly)
+		self.ui.memSetButton.setEnabled(not is_readonly)
 		
 	def onMemSetButtonClicked(self):
-		print("mem set button clicked")
-		pass
+		self.is_mem_writing_ = True
+		selectedRows = self.ui.memoryTableView.selectionModel().slectedRows()
+		mem_config = self.getMemConfig(self.select_servo_.model_)
+		(address, name, size, default_value, dir_bit, is_eprom, is_readonly, min_val, max_val) = mem_config[selectedRows.first().row()]
+
+		# TODO No address reference
+		if address == 5:
+			# TODO: Support non-STS servos
+			val = int(ui.memSetLineEdit.text())
+			self.scserial.write_byte(self.select_servo_.id_, 55, 0) // unlock
+			self.scserial.write_byte(self.select_servo_.id_, address, val)
+			self.scserial.write_byte(self.select_servo_.id_, 55, 1) // lock
+			select_servo_.id_ = val
+		# FIXME: else missing?
+		val = int(self.ui.memSetLineEdit.text())
+		if size == 2:
+			self.scserial_.write_word(self.select_servo_.id_, address, val)
+		else:
+			self.scserial_.write_byte(self.select_servo_.id_, address, val)
+		self.is_mem_writing_ = False
 		
 	def onGraphTimerTimeout(self):
-		#print("graph timer timeout")
-		pass
+		self.ui.grapWidget.up_limit = int(self.ui.upLimitLineEdit.text())
+		self.ui.grapWidget.down_limit = int(self.ui.downLimitLineEdit.text())
+		self.ui.grapWidget.horizontal = self.ui.horizontalSlider.value()
+		self.ui.grapWidget.zoom = self.ui.zoomSlider.value()
+
+		if self.is_searching_ or not self.serial_.isOpen() or self.select_servo_.id_ < 0:
+			return
+
+		self.ui.positionLabel.setText(str(self.latest_status_["pos"]))
+		self.ui.torqueLabel.setText(str(self.latest_status_["torque"]))
+		self.ui.speedLabel.setText(str(self.latest_status_["speed"]))
+		self.ui.currentLabel.setText(str(self.latest_status_["current"]))
+		self.ui.temperatureLabel.setText(str(self.latest_status_["temp"]))
+		self.ui.voltageLabel.setText("%.1fV" % self.latest_status_["voltage"] * 0.1)
+		self.ui.movingLabel.setText(str(self.latest_status_["move"]))
+		self.ui.goalLabel.setText(str(self.latest_status_["goal"]))
+
+		self.ui.graphWidget.series['pos'].visible = self.ui.posCheckBox.isChecked()
+		self.ui.graphWidget.series['torque'].visible = self.ui.torqueCheckBox.isChecked()
+		self.ui.graphWidget.series['speed'].visible = self.ui.speedCheckBox.isChecked()
+		self.ui.graphWidget.series['current'].visible = self.ui.currentCheckBox.isChecked()
+		self.ui.graphWidget.series['temp'].visible = self.ui.tempCheckBox.isChecked()
+		self.ui.graphWidget.series['voltage'].visible = self.ui.voltageCheckBox.isChecked()
 
 	def onServoReadTimerTimeout(self):
-		pass
+		if ui.tabWidget.currentIndex() != 0:
+			return
+
+		count = 0
+		if self.isServoValidNow():
+			if self.select_servo_.model_ == "SCS":
+				if count == 0:
+					self.latest_status_["pos"] = self.scs_serial_.read_position(self.select_servo_.id_)
+					self.latest_status_["torque"] = self.scs_serial_.read_load(self.select_servo_.id_)
+				elif count == 1:
+					self.latest_status_["speed"] = self.scs_serial_.read_spedc(self.select_servo_.id_)
+					self.latest_status_["current"] = self.scs_serial_.read_current(self.select_servo_.id_)
+				elif count == 2:
+					self.latest_status_["temp"] = self.scs_serial_.read_temperature(self.select_servo_.id_)
+					self.latest_status_["voltage"] = self.scs_serial_.read_voltage(self.select_servo_.id_)
+					self.latest_status_["move"] = self.scs_serial_.read_move(self.select_servo_.id_)
+					self.latest_status_["goal"] = self.scs_serial_.read_goal(self.select_servo_.id_)
+					self.ui.graphWidget.append_data(self.lates_status_['pos'],
+						self.latest_status_['torque'],
+						self.latest_status_['speed'],
+						self.latest_status_['current'],
+						self.latest_status_['temp'],
+						self.latest_status_['voltage'])
+			else:
+				if count == 0:
+					self.latest_status_["pos"] = self.sms_sts_serial_.read_position(self.select_servo_.id_)
+					self.latest_status_["torque"] = self.sms_sts_serial_.read_load(self.select_servo_.id_)
+				elif count == 1:
+					self.latest_status_["speed"] = self.sms_sts_serial_.read_spedc(self.select_servo_.id_)
+					self.latest_status_["current"] = self.sms_sts_serial_.read_current(self.select_servo_.id_)
+					self.latest_status_["temp"] = self.sms_sts_serial_.read_temperature(self.select_servo_.id_)
+				elif count == 2:
+					self.latest_status_["voltage"] = self.sms_sts_serial_.read_voltage(self.select_servo_.id_)
+					self.latest_status_["move"] = self.sms_sts_serial_.read_move(self.select_servo_.id_)
+					self.latest_status_["goal"] = self.sms_sts_serial_.read_goal(self.select_servo_.id_)
+					self.ui.graphWidget.append_data(self.lates_status_['pos'],
+						self.latest_status_['torque'],
+						self.latest_status_['speed'],
+						self.latest_status_['current'],
+						self.latest_status_['temp'],
+						self.latest_status_['voltage'])
+
+		count = (count + 1) % 3
