@@ -13,8 +13,19 @@ def mkitem(x):
 class SCSerial:
 	def set_timeout(self, t):
 		pass
+		
 	def ping(self, id):
+		if id == 1:
+			return 1
 		return -1
+
+	def read_model_number(self, id):
+		if id == 1:
+			return 1
+		return -1
+
+	def set_end(self, end):
+		pass
 
 class MainWindow(QMainWindow):
 	def __init__(self, parent=None):
@@ -47,6 +58,7 @@ class MainWindow(QMainWindow):
 		self.setIntRangeLineEdit(self.ui.downLimitLineEdit, 0, 1_200)
 
 		self.mode_ = "WRITE"
+		self.id_list_ = []
 		self.is_searching_ = False
 		self.sweep_running_ = False
 		self.step_running_ = False
@@ -71,7 +83,7 @@ class MainWindow(QMainWindow):
 
 	def isServoValidNow(self):
 		return not (self.is_searching_ or not self.serial_.isOpen() or
-			self.select_servo_.id < 0)
+			self.select_servo_.id_ < 0)
 	
 	def setupComSettings(self):
 		self.ui.BaudComboBox.addItems([
@@ -82,9 +94,9 @@ class MainWindow(QMainWindow):
 		self.setIntRangeLineEdit(self.ui.timeoutLineEdit, 0, 10_000)
 		self.onPortSearchTimerTimeout() # fake event
 		self.ui.ComOpenButton.clicked.connect(self.onConnectButtonClicked)
-		self.port_search_timer_ = QtCore.QTimer(self)
-		self.port_search_timer_.timeout.connect(self.onPortSearchTimerTimeout)
-		self.port_search_timer_.start(500)
+		#self.port_search_timer_ = QtCore.QTimer(self)
+		#self.port_search_timer_.timeout.connect(self.onPortSearchTimerTimeout)
+		#self.port_search_timer_.start(500)
 
 	def setupServoList(self):
 		self.ui.SearchButton.clicked.connect(self.onSearchButtonClicked)
@@ -217,7 +229,7 @@ class MainWindow(QMainWindow):
 		else:
 			self.scserial_.set_end(0)
 		self.select_servo_.model_ = series
-		upgradeProgMemTable()
+		self.updateProgMemTable()
 	
 	def getMemConfig(self, series):
 		if series == "SCS":
@@ -281,7 +293,8 @@ class MainWindow(QMainWindow):
 			self.clearServoList()
 			self.id_list_.clear()
 			self.search_id_ = 0
-			self.search_timer_.start(10)
+			self.is_searching_ = True
+			#self.search_timer_.start(10)
 			self.onSearchTimerTimeout()
 		else:
 			self.ui.SearchButton.setText("Search")
@@ -290,22 +303,23 @@ class MainWindow(QMainWindow):
 			
 	def onSearchTimerTimeout(self):
 		#print("search timer timeout")
-		self.search_timer.stop()
+		self.search_timer_.stop()
 		if not self.is_searching_:
+			print("not searching")
 			return
 
-		if 0xfd < self.search_id_ or not self.serial.isOpen():
+		if 0xfd < self.search_id_ or not self.serial_.isOpen():
 			self.is_searching_ = False
 			self.ui.SearchButton.setText("Search")
 			self.ui.ServoSearchText.setText("Stop")
 		else:
-			self.ui.ServoSearchText.setText(f"Ping ID:{search_id} Servo...")
+			self.ui.ServoSearchText.setText(f"Ping ID:{self.search_id_} Servo...")
 			ret = self.scserial_.ping(self.search_id_)
 			if 0 < ret:
 				mid = self.scserial_.read_model_number(ret)
-				name = servo.getModeltype(mid)
+				name = servo.getModelType(mid)
 				self.appendServoList(ret, name)
-				self.id_list_ += ret
+				self.id_list_ += [ret]
 				self.selectServorSeries(servo.getModelSeries(name))
 			self.search_id_ += 1
 			self.search_timer_.start(1)
@@ -367,7 +381,7 @@ class MainWindow(QMainWindow):
 			elif self.ui.regWriteRadioButton.isChecked():
 				self.mode_ = "REG_WRITE"
 
-			self.ui.actionPushButton.setEnable(self.mode_ == "REG_WRITE")
+			self.ui.actionPushButton.setEnabled(self.mode_ == "REG_WRITE")
 	
 	def onActionButtonClicked(self):
 		if self.isServoValidNow():

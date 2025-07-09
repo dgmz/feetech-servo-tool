@@ -95,6 +95,8 @@ SCSMemConfig = [
 
 
 def getModelType(mid):
+	if mid == 1:
+		return "XXX"
 	return None
 
 def getModelSeries(name):
