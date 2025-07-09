@@ -516,7 +516,7 @@ class MainWindow(QMainWindow):
 			str(self.latest_status_["current"]),
 			str(self.latest_status_["temp"]),
 			str(self.latest_status_["voltage"]),
-			"END")
+			"END"])
 		self.record_section_data_ += line + "\n"
 		section_size = 20 * self.file_write_interval_ # FIXME: magic number
 
@@ -537,9 +537,9 @@ class MainWindow(QMainWindow):
 		if self.is_mem_writing_:
 			return
 
-		firstVisibleRow = self.ui.memoryTableView.indexAt(self.ui.memoryTableView.viewport().rect().topLeft().row()
-		lastVisibleRow = self.ui.memoryTableView.indexAt(self.ui.memoryTableView.viewport().rect().bottomLeft().row()
-		if (firstVisibleRow != -1 and lastVisibleRow != -1:
+		firstVisibleRow = self.ui.memoryTableView.indexAt(self.ui.memoryTableView.viewport().rect().topLeft().row())
+		lastVisibleRow = self.ui.memoryTableView.indexAt(self.ui.memoryTableView.viewport().rect().bottomLeft().row())
+		if firstVisibleRow != -1 and lastVisibleRow != -1:
 			mem_config = self.getMemConfig(select_servo_.model_)
 			for i in range(firstVisibleRow, lastVisibleRow + 1):
 				(address, _, size, _, _, _, _, _, _) = mem_config[i]
@@ -554,22 +554,22 @@ class MainWindow(QMainWindow):
 		
 	def onMemoryTableSelection(self):
 		selectedRows = self.ui.memoryTableView.selectionModel().selectedRows()
-		row = selectedRows.first().row()
+		row = selectedRows[0].row()
 		mem = self.prog_mem_model_
 		index = mem.index(row, 1)
 		self.ui.memLabel.setText(str(mem.data(index)))
 		index = mem.index(row, 2)
 		self.ui.memSetLineEdit.setText(str(mem.data(index)))
 		mem_config = self.getMemConfig(self.select_servo_.model_)
-		is_readonly = mem_config[row].is_readonly
-		self.ui.memSetLineEdit.setEnable(not is_readonly)
+		(_, _, _, _, _, _, is_readonly, _, _ ) = mem_config[row]
+		self.ui.memSetLineEdit.setEnabled(not is_readonly)
 		self.ui.memSetButton.setEnabled(not is_readonly)
 		
 	def onMemSetButtonClicked(self):
 		self.is_mem_writing_ = True
 		selectedRows = self.ui.memoryTableView.selectionModel().slectedRows()
 		mem_config = self.getMemConfig(self.select_servo_.model_)
-		(address, name, size, default_value, dir_bit, is_eprom, is_readonly, min_val, max_val) = mem_config[selectedRows.first().row()]
+		(address, name, size, default_value, dir_bit, is_eprom, is_readonly, min_val, max_val) = mem_config[selectedRows[0].row()]
 
 		# TODO No address reference
 		if address == 5:
@@ -588,10 +588,10 @@ class MainWindow(QMainWindow):
 		self.is_mem_writing_ = False
 		
 	def onGraphTimerTimeout(self):
-		self.ui.grapWidget.up_limit = int(self.ui.upLimitLineEdit.text())
-		self.ui.grapWidget.down_limit = int(self.ui.downLimitLineEdit.text())
-		self.ui.grapWidget.horizontal = self.ui.horizontalSlider.value()
-		self.ui.grapWidget.zoom = self.ui.zoomSlider.value()
+		self.ui.graphWidget.up_limit = int(self.ui.upLimitLineEdit.text())
+		self.ui.graphWidget.down_limit = int(self.ui.downLimitLineEdit.text())
+		self.ui.graphWidget.horizontal = self.ui.horizontalSlider.value()
+		self.ui.graphWidget.zoom = self.ui.zoomSlider.value()
 
 		if self.is_searching_ or not self.serial_.isOpen() or self.select_servo_.id_ < 0:
 			return
@@ -613,7 +613,7 @@ class MainWindow(QMainWindow):
 		self.ui.graphWidget.series['voltage'].visible = self.ui.voltageCheckBox.isChecked()
 
 	def onServoReadTimerTimeout(self):
-		if ui.tabWidget.currentIndex() != 0:
+		if self.ui.tabWidget.currentIndex() != 0:
 			return
 
 		count = 0
