@@ -48,8 +48,8 @@ class MainWindow(QMainWindow):
 
 		self.is_searching_ = False
 		self.sweep_running_ = False
-		self.setp_running_ = False
-		self.setp_increase_ = False
+		self.step_running_ = False
+		self.step_increase_ = False
 		self.mode_ = "WRITE"
 
 	def isServoValidNow(self):
@@ -105,11 +105,11 @@ class MainWindow(QMainWindow):
 		self.setIntRangeLineEdit(self.ui.startLineEdit, 0, 4095)
 		self.setIntRangeLineEdit(self.ui.endLineEdit, 0, 4095)
 		self.setIntRangeLineEdit(self.ui.sweepLineEdit, 0, I32_MAX)
-		self.setIntRangeLineEdit(self.ui.setpLineEdit, 1, I32_MAX)
-		self.setIntRangeLineEdit(self.ui.setpDelayLineEdit, 1, I32_MAX)
+		self.setIntRangeLineEdit(self.ui.stepLineEdit, 1, I32_MAX)
+		self.setIntRangeLineEdit(self.ui.stepDelayLineEdit, 1, I32_MAX)
 		
 		self.ui.sweepButton.clicked.connect(self.onSweepButtonClicked)
-		self.ui.setpButton.clicked.connect(self.onSetpButtonClicked)
+		self.ui.stepButton.clicked.connect(self.onStepButtonClicked)
 		
 		self.auto_debug_timer_ = QtCore.QTimer(self)
 		self.auto_debug_timer_.timeout.connect(self.onAutoDebugTimerTimeout)
@@ -366,12 +366,12 @@ class MainWindow(QMainWindow):
 		if self.sweep_running_:
 			self.sweep_running = False
 			self.ui.sweepButton.setText("Sweep")
-			self.ui.setpButton.setEnabled(True)
+			self.ui.stepButton.setEnabled(True)
 			self.auto_debug_timer_.stop()
 		else:
 			self.sweep_running_ = True
 			self.ui.sweepButton.setText("Stop")
-			self.ui.setpButton.setEnabled(False)
+			self.ui.stepButton.setEnabled(False)
 			self.latest_auto_debug_goal_ = int(self.ui.startLineEdit.text())
 
 			if self.select_servo_.model_ == "SCS":
@@ -381,19 +381,19 @@ class MainWindow(QMainWindow):
 				self.sms_sts_serial_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			self.auto_debug_timer_.start(int(self.ui.sweepLineEdit.text()))
 	
-	def onSetpButtonClicked(self):
+	def onStepButtonClicked(self):
 		if not self.isServoValidNow():
 			return
 
-		if self.setp_running_:
-			self.setp_running_ = False
-			self.ui.setpButton.setText("Setp")
+		if self.step_running_:
+			self.step_running_ = False
+			self.ui.stepButton.setText("Step")
 			self.ui.sweepButton.setEnabled(True)
 			self.auto_debug_timer_.stop()
 		else:
-			self.setp_running_ = True
-			self.setp_increase_ = True
-			self.ui.setpButton.setText("Stop")
+			self.step_running_ = True
+			self.step_increase_ = True
+			self.ui.stepButton.setText("Stop")
 			self.ui.sweepButton.setEnabled(False)
 			self.latest_auto_debug_goal_ = int(self.ui.startLineEdit.text())
 			if self.select_servo_.model_ == "SCS":
@@ -401,17 +401,17 @@ class MainWindow(QMainWindow):
 			else:
 				self.sms_sts_serial_.rotation_mode(self.select_servo_.id_)
 				self.sms_sts_serial_.write_pos(select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
-			self.auto_debug_timer.start(int(self.ui.setpDelayLineEdit.text()))
+			self.auto_debug_timer.start(int(self.ui.stepDelayLineEdit.text()))
 		
 	def onAutoDebugTimerTimeout(self):
 		if not self.isServoValidNow():
 			self.auto_debug_timer.stop()
 			self.sweep_running_ = False
-			self.setp_running_ = False
+			self.step_running_ = False
 			self.ui.sweepButton.setText("Sweep")
 			self.ui.sweepButton.setEnabled(True)
-			self.ui.setpButton.setText("Setp")
-			self.ui.setpButton.setEnabled(True)
+			self.ui.stepButton.setText("Step")
+			self.ui.stepButton.setEnabled(True)
 			return
 
 		if self.seep_running_:
@@ -426,19 +426,19 @@ class MainWindow(QMainWindow):
 			else:
 				self.sms_sts_serial_.rotation_mode(self.select_servo_.id_)
 				self.sms_sts_serial_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
-		elif self.setp_running_:
+		elif self.step_running_:
 			start = int(self.ui.startLineEdit.text())
 			end = int(self.ui.endLineEdit.text())
-			step = int(self.ui.setpLineEdit.text())
+			step = int(self.ui.stepLineEdit.text())
 
-			self.latest_auto_debug_goal_ += step if self.setp_increase_ else -setp
+			self.latest_auto_debug_goal_ += step if self.step_increase_ else -step
 
 			if end < self.latest_auto_debug_goal_:
 				self.latest_auto_debug_goal_ = end
-				self.setp_increase = False
+				self.step_increase = False
 			elif self.latest_auto_debug_goal_ < start:
 				self.latest_auto_debug_goal_ = start
-				self.setp_increase = True
+				self.step_increase = True
 
 			if self.select_servo_.model_ == "SCS":
 				self.scs_serial_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
