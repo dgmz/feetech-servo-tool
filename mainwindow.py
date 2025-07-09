@@ -404,8 +404,49 @@ class MainWindow(QMainWindow):
 			self.auto_debug_timer.start(int(self.ui.setpDelayLineEdit.text()))
 		
 	def onAutoDebugTimerTimeout(self):
-		print("auto debug timer timeout")
-		pass
+		if not self.isServoValidNow():
+			self.auto_debug_timer.stop()
+			self.sweep_running_ = False
+			self.setp_running_ = False
+			self.ui.sweepButton.setText("Sweep")
+			self.ui.sweepButton.setEnabled(True)
+			self.ui.setpButton.setText("Setp")
+			self.ui.setpButton.setEnabled(True)
+			return
+
+		if self.seep_running_:
+			start = int(self.ui.startLineEdit.text())
+			end = int(self.ui.endLineEdit.text())
+			if self.latest_auto_debug_goal_ == start:
+				self.latest_auto_debug_goal_ = end
+			else:
+				self.latest_auto_debug_goal_ = start
+			if self.select_servo_.model_ == "SCS":
+				self.scs_serial_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
+			else:
+				self.sms_sts_serial_.rotation_mode(self.select_servo_.id_)
+				self.sms_sts_serial_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
+		elif self.setp_running_:
+			start = int(self.ui.startLineEdit.text())
+			end = int(self.ui.endLineEdit.text())
+			step = int(self.ui.setpLineEdit.text())
+
+			self.latest_auto_debug_goal_ += step if self.setp_increase_ else -setp
+
+			if end < self.latest_auto_debug_goal_:
+				self.latest_auto_debug_goal_ = end
+				self.setp_increase = False
+			elif self.latest_auto_debug_goal_ < start:
+				self.latest_auto_debug_goal_ = start
+				self.setp_increase = True
+
+			if self.select_servo_.model_ == "SCS":
+				self.scs_serial_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
+			else:
+				self.sms_sts_serial_.rotation_mode(self.select_servo_.id_)
+				self.sms_sts_serial_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
+		else:
+			self.auto_debug_timer.stop()
 	
 	def onExportButtonClicked(self):
 		print("export button clicked")
