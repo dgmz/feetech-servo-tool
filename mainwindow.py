@@ -136,9 +136,6 @@ class MainWindow(QMainWindow):
 		self.setIntRangeLineEdit(self.ui.timeoutLineEdit, 0, 10_000)
 		self.onPortSearchTimerTimeout() # fake event
 		self.ui.ComOpenButton.clicked.connect(self.onConnectButtonClicked)
-		#self.port_search_timer_ = QtCore.QTimer(self)
-		#self.port_search_timer_.timeout.connect(self.onPortSearchTimerTimeout)
-		#self.port_search_timer_.start(500)
 
 	def setupServoList(self):
 		self.ui.SearchButton.clicked.connect(self.onSearchButtonClicked)
