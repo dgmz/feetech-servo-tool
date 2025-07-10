@@ -252,10 +252,9 @@ class MainWindow(QMainWindow):
 		mem_config = self.getMemConfig(self.select_servo_.model_)
 		
 		for item in mem_config:
-			(address, name, size, default_value, dir_bit, is_eprom, is_readonly, min_val, max_val) = item
-			area = "EPROM" if is_eprom else "SRAM"
-			rw = "R" if is_readonly else "R/W"
-			rowList = [mkitem(address), mkitem(name), mkitem(default_value), mkitem(area), mkitem(rw)]
+			area = "EPROM" if item.is_eprom else "SRAM"
+			rw = "R" if item.is_readonly else "R/W"
+			rowList = [mkitem(item.address), mkitem(item.name), mkitem(item.default_value), mkitem(area), mkitem(rw)]
 			self.prog_mem_model_.appendRow(rowList)
 	
 	def setIntRangeLineEdit(self, edit, minval, maxval):
@@ -597,12 +596,12 @@ class MainWindow(QMainWindow):
 		if firstVisibleRow != -1 and lastVisibleRow != -1:
 			mem_config = self.getMemConfig(self.select_servo_.model_)
 			for i in range(firstVisibleRow, lastVisibleRow + 1):
-				(address, _, size, _, _, _, _, _, _) = mem_config[i]
+				item = mem_config[i]
 				val = 0
-				if size == 2:
-					val = self.servo_bus_.read_word(self.select_servo_.id_, address)
+				if item.size == 2:
+					val = self.servo_bus_.read_word(self.select_servo_.id_, item.address)
 				else:
-					val = self.servo_bus_.read_byte(self.select_servo_.id_, address)
+					val = self.servo_bus_.read_byte(self.select_servo_.id_, item.address)
 
 				model = self.ui.memoryTableView.model()
 				model.setData(model.index(i,2), str(val))
@@ -616,30 +615,30 @@ class MainWindow(QMainWindow):
 		index = mem.index(row, 2)
 		self.ui.memSetLineEdit.setText(str(mem.data(index)))
 		mem_config = self.getMemConfig(self.select_servo_.model_)
-		(_, _, _, _, _, _, is_readonly, _, _ ) = mem_config[row]
-		self.ui.memSetLineEdit.setEnabled(not is_readonly)
-		self.ui.memSetButton.setEnabled(not is_readonly)
+		item = mem_config[row]
+		self.ui.memSetLineEdit.setEnabled(not item.is_readonly)
+		self.ui.memSetButton.setEnabled(not item.is_readonly)
 		
 	def onMemSetButtonClicked(self):
 		self.is_mem_writing_ = True
 		selectedRows = self.ui.memoryTableView.selectionModel().selectedRows()
 		mem_config = self.getMemConfig(self.select_servo_.model_)
-		(address, name, size, default_value, dir_bit, is_eprom, is_readonly, min_val, max_val) = mem_config[selectedRows[0].row()]
+		item = mem_config[selectedRows[0].row()]
 
 		# TODO No address reference
-		if address == 5:
+		if item.address == 5:
 			# TODO: Support non-STS servos
 			val = int(self.ui.memSetLineEdit.text())
 			self.servo_bus_.write_byte(self.select_servo_.id_, 55, 0) # unlock
-			self.servo_bus_.write_byte(self.select_servo_.id_, address, val)
+			self.servo_bus_.write_byte(self.select_servo_.id_, 5, val)
 			self.servo_bus_.write_byte(self.select_servo_.id_, 55, 1) # lock
 			self.select_servo_.id_ = val
-		# FIXME: else missing?
-		val = int(self.ui.memSetLineEdit.text())
-		if size == 2:
-			self.servo_bus_.write_word(self.select_servo_.id_, address, val)
 		else:
-			self.servo_bus_.write_byte(self.select_servo_.id_, address, val)
+			val = int(self.ui.memSetLineEdit.text())
+			if item.size == 2:
+				self.servo_bus_.write_word(self.select_servo_.id_, item.address, val)
+			else:
+				self.servo_bus_.write_byte(self.select_servo_.id_, item.address, val)
 		self.is_mem_writing_ = False
 		
 	def onGraphTimerTimeout(self):
