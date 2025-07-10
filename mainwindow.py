@@ -9,9 +9,6 @@ import servo
 
 I32_MAX = 2 ** 31 - 1
 
-def mkitem(x):
-	return QtGui.QStandardItem(str(x))
-
 class ServoBus:
 	def set_timeout(self, t):
 		pass
@@ -232,7 +229,7 @@ class MainWindow(QMainWindow):
 		view.setEditTriggers(view.EditTrigger.NoEditTriggers)
 		
 	def appendServoList(self, id, name):
-		self.servo_list_model_.appendRow([mkitem(id), mkitem(name)])
+		self.servo_list_model_.appendRow([QtGui.QStandardItem(str(id)), QtGui.QStandardItem(name)])
 	
 	def clearProgMemTable(self):
 		self.prog_mem_model_.clear()
@@ -257,7 +254,7 @@ class MainWindow(QMainWindow):
 		for item in mem_config:
 			area = "EPROM" if item.is_eprom else "SRAM"
 			rw = "R" if item.is_readonly else "R/W"
-			rowList = [mkitem(item.address), mkitem(item.name), mkitem(item.default_value), mkitem(area), mkitem(rw)]
+			rowList = [QtGui.QStandardItem(str(x)) for x in (item.address, item.name, item.default_value, area, rw)]
 			self.prog_mem_model_.appendRow(rowList)
 	
 	def setIntRangeLineEdit(self, edit, minval, maxval):
