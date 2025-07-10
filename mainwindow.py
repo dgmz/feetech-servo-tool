@@ -1,9 +1,10 @@
 import sys
-from PyQt6 import QtWidgets, QtSerialPort, QtCore, QtGui
+from PyQt6 import QtWidgets, QtCore, QtGui
 from PyQt6.QtWidgets import QMainWindow
 from PyQt6.QtGui import QIntValidator, QRegularExpressionValidator
 from ui_mainwindow import Ui_MainWindow
 import serial.tools.list_ports
+import scservo_sdk
 import servo
 
 I32_MAX = 2 ** 31 - 1
@@ -83,7 +84,7 @@ class MainWindow(QMainWindow):
 		self.graph_timer_.timeout.connect(self.onGraphTimerTimeout)
 		self.graph_timer_.start(30)
 		#serial port
-		self.serial_ = QtSerialPort.QSerialPort(self)
+		self.serial_ = None
 		self.servo_bus_ = ServoBus() # TODO init API
 		
 		self.sms_sts_proto_ = ServoProtocol()
@@ -125,8 +126,8 @@ class MainWindow(QMainWindow):
 		self.latest_move_ = 0
 
 	def isServoValidNow(self):
-		return not (self.is_searching_ or not self.serial_.isOpen() or
-			self.select_servo_.id_ < 0)
+		return not self.is_searching_ and self.serial_ is not None \
+			and self.select_servo_.id_ >= 0
 	
 	def setupComSettings(self):
 		self.ui.BaudComboBox.addItems([
@@ -211,7 +212,7 @@ class MainWindow(QMainWindow):
 	def setEnableComSettings(self, state):
 		self.ui.ComComboBox.setEnabled(state)
 		self.ui.BaudComboBox.setEnabled(state)
-		self.ui.ParityComboBox.setEnabled(state)
+		#self.ui.ParityComboBox.setEnabled(state)
 		self.ui.timeoutLineEdit.setEnabled(state)
 		
 	def clearServoList(self):
@@ -290,7 +291,7 @@ class MainWindow(QMainWindow):
 	
 	def onPortSearchTimerTimeout(self):
 		#print("port seach timeout")
-		if self.serial_.isOpen():
+		if self.serial_ is not None:
 			return
 
 		previous = self.ui.ComComboBox.currentText()
@@ -301,33 +302,21 @@ class MainWindow(QMainWindow):
 			
 		
 	def onConnectButtonClicked(self):
-		if self.serial_.isOpen():
-			self.serial_.close()
+		if self.serial_ is not None:
+			self.serial_.closePort()
+			self.serial_ = None
 			self.ui.ComOpenButton.setText("Open")
 			self.setEnableComSettings(True)
 			self.select_servo_.id_ = -1
 		else:
-			self.serial_.setPortName(self.ui.ComComboBox.currentText())
+			self.serial_ = scservo_sdk.PortHandler(self.ui.ComComboBox.currentText())
 			self.serial_.setBaudRate(int(self.ui.BaudComboBox.currentText()))
-			pidx = self.ui.ParityComboBox.currentIndex()
-			p = self.serial_.Parity.NoParity
-			if pidx == 1:
-				p = self.serial_.Parity.OddParity
-			elif pidx == 2:
-				p = self.serial_.Parity.EvenParity
-			self.serial_.setParity(p)
-			self.serial_.setDataBits(self.serial_.DataBits.Data8)
-			self.serial_.setStopBits(self.serial_.StopBits.OneStop)
-			self.serial_.setFlowControl(self.serial_.FlowControl.NoFlowControl)
-			if self.serial_.open(self.serial_.OpenModeFlag.ReadWrite):
-				self.ui.ComOpenButton.setText("Close")
-				self.setEnableComSettings(False)
-			else:
-				self.ui.ComOpenButton.setText("Open")
+			self.ui.ComOpenButton.setText("Close")
+			self.setEnableComSettings(False)
 			self.servo_bus_.set_timeout(int(self.ui.timeoutLineEdit.text()))
 	
 	def onSearchButtonClicked(self):
-		if not self.serial_.isOpen():
+		if self.serial_ is None:
 			print("serial not open")
 			return
 			
@@ -353,7 +342,7 @@ class MainWindow(QMainWindow):
 			print("not searching")
 			return
 
-		if 0xfd < self.search_id_ or not self.serial_.isOpen():
+		if 0xfd < self.search_id_ or self.serial_ is None:
 			self.is_searching_ = False
 			self.ui.SearchButton.setText("Search")
 			self.ui.ServoSearchText.setText("Stop")
@@ -652,7 +641,7 @@ class MainWindow(QMainWindow):
 		self.ui.graphWidget.horizontal = self.ui.horizontalSlider.value()
 		self.ui.graphWidget.zoom = self.ui.zoomSlider.value()
 
-		if self.is_searching_ or not self.serial_.isOpen() or self.select_servo_.id_ < 0:
+		if self.is_searching_ or self.serial_ is None or self.select_servo_.id_ < 0:
 			return
 
 		self.ui.positionLabel.setText(str(self.latest_pos_))
