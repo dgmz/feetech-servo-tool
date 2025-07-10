@@ -10,21 +10,43 @@ import servo
 I32_MAX = 2 ** 31 - 1
 
 class ServoBus:
+	def __init__(self):
+		self.port_handler_ = None
+		self.end_ = 0
+
+	def open(self, port_name):
+		if self.port_handler_ is not None:
+			return False
+		handler = scservo_sdk.PortHandler(port_name)
+		if handler.openPort():
+			self.port_handler_ = handler
+		return self.port_handler_ is not None
+
+	def is_open(self):
+		return self.port_handler_ is not None
+
+	def close(self):
+		self.port_handler_.closePort()
+		self.port_handler_ = None
+
+	def set_baudrate(self, baudrate):
+		return self.port_handler_.setBaudRate(baudrate)
+	
 	def set_timeout(self, t):
-		pass
+		self.port_handler_.setPacketTimeoutMillis(t)
 		
 	def ping(self, id):
-		if id == 1:
-			return 1
-		return -1
+		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
+		model, result, error = packet_handler.ping(id)
+		return result
 
 	def read_model_number(self, id):
-		if id == 1:
-			return 1
-		return -1
+		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
+		model, result, error = packet_handler.ping(id)
+		return model
 
 	def set_end(self, end):
-		pass
+		self.end_ = end
 
 	def read_byte(self, id, address):
 		pass
@@ -81,8 +103,7 @@ class MainWindow(QMainWindow):
 		self.graph_timer_.timeout.connect(self.onGraphTimerTimeout)
 		self.graph_timer_.start(30)
 		#serial port
-		self.serial_ = None
-		self.servo_bus_ = ServoBus() # TODO init API
+		self.servo_bus_ = ServoBus()
 		
 		self.sms_sts_proto_ = ServoProtocol()
 		self.scs_proto_ = ServoProtocol()
@@ -123,7 +144,7 @@ class MainWindow(QMainWindow):
 		self.latest_move_ = 0
 
 	def isServoValidNow(self):
-		return not self.is_searching_ and self.serial_ is not None \
+		return not self.is_searching_ and self.servo_bus_.is_open() \
 			and self.select_servo_.id_ >= 0
 	
 	def setupComSettings(self):
@@ -288,7 +309,7 @@ class MainWindow(QMainWindow):
 	
 	def onPortSearchTimerTimeout(self):
 		#print("port seach timeout")
-		if self.serial_ is not None:
+		if self.servo_bus_.is_open():
 			return
 
 		previous = self.ui.ComComboBox.currentText()
@@ -299,22 +320,23 @@ class MainWindow(QMainWindow):
 			
 		
 	def onConnectButtonClicked(self):
-		if self.serial_ is not None:
-			self.serial_.closePort()
-			self.serial_ = None
+		if self.servo_bus_.is_open():
+			self.servo_bus_.close()
 			self.ui.ComOpenButton.setText("Open")
 			self.setEnableComSettings(True)
 			self.select_servo_.id_ = -1
 		else:
-			self.serial_ = scservo_sdk.PortHandler(self.ui.ComComboBox.currentText())
-			self.serial_.setBaudRate(int(self.ui.BaudComboBox.currentText()))
-			self.ui.ComOpenButton.setText("Close")
-			self.setEnableComSettings(False)
-			self.servo_bus_.set_timeout(int(self.ui.timeoutLineEdit.text()))
+			if not self.servo_bus_.open(self.ui.ComComboBox.currentText()):
+				print("Failed to open port")
+			else:
+				self.servo_bus_.set_baudrate(int(self.ui.BaudComboBox.currentText()))
+				self.servo_bus_.set_timeout(int(self.ui.timeoutLineEdit.text()))
+				self.ui.ComOpenButton.setText("Close")
+				self.setEnableComSettings(False)
 	
 	def onSearchButtonClicked(self):
-		if self.serial_ is None:
-			print("serial not open")
+		if not self.servo_bus_.is_open():
+			print("bus not open")
 			return
 			
 		self.is_searching = not self.is_searching_
@@ -339,18 +361,18 @@ class MainWindow(QMainWindow):
 			print("not searching")
 			return
 
-		if 0xfd < self.search_id_ or self.serial_ is None:
+		if 0xfd < self.search_id_ or not self.servo_bus_.is_open():
 			self.is_searching_ = False
 			self.ui.SearchButton.setText("Search")
 			self.ui.ServoSearchText.setText("Stop")
 		else:
 			self.ui.ServoSearchText.setText(f"Ping ID:{self.search_id_} Servo...")
 			ret = self.servo_bus_.ping(self.search_id_)
-			if 0 < ret:
-				mid = self.servo_bus_.read_model_number(ret)
+			if 0 == ret:
+				mid = self.servo_bus_.read_model_number(self.search_id_)
 				name = servo.getModelType(mid)
-				self.appendServoList(ret, name)
-				self.id_list_ += [ret]
+				self.appendServoList(self.search_id_, name)
+				self.id_list_ += [self.search_id_]
 				self.selectServorSeries(servo.getModelSeries(name))
 			self.search_id_ += 1
 			self.search_timer_.start(1)
@@ -638,7 +660,7 @@ class MainWindow(QMainWindow):
 		self.ui.graphWidget.horizontal = self.ui.horizontalSlider.value()
 		self.ui.graphWidget.zoom = self.ui.zoomSlider.value()
 
-		if self.is_searching_ or self.serial_ is None or self.select_servo_.id_ < 0:
+		if self.is_searching_ or not self.servo_bus_.is_open() or self.select_servo_.id_ < 0:
 			return
 
 		self.ui.positionLabel.setText(str(self.latest_pos_))
