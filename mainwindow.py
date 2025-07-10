@@ -111,16 +111,15 @@ class MainWindow(QMainWindow):
 		self.record_file_name_ = None
 		self.record_section_data_ = ""
 		self.is_mem_writing_ = False
-		self.latest_status_ = {
-			"pos": 0,
-			"goal": 0,
-			"torque": 0,
-			"speed": 0,
-			"current": 0,
-			"temp": 0,
-			"voltage": 0,
-			"move": 0
-		}
+
+		self.latest_pos_ = 0
+		self.latest_goal_ = 0
+		self.latest_torque_ = 0
+		self.latest_speed_ = 0
+		self.latest_current_ = 0
+		self.latest_temp_ = 0
+		self.latest_voltage_ = 0
+		self.latest_move_ = 0
 
 	def isServoValidNow(self):
 		return not (self.is_searching_ or not self.serial_.isOpen() or
@@ -563,13 +562,13 @@ class MainWindow(QMainWindow):
 
 		self.record_data_count += 1
 		line = ",".join([str(self.record_data_count_),
-			str(self.latest_status_["pos"]),
-			str(self.latest_status_["goal"]),
-			str(self.latest_status_["torque"]),
-			str(self.latest_status_["speed"]),
-			str(self.latest_status_["current"]),
-			str(self.latest_status_["temp"]),
-			str(self.latest_status_["voltage"]),
+			str(self.latest_pos_),
+			str(self.latest_goal_),
+			str(self.latest_torque_),
+			str(self.latest_speed_),
+			str(self.latest_current_),
+			str(self.latest_temp_),
+			str(self.latest_voltage_),
 			"END"])
 		self.record_section_data_ += line + "\n"
 		section_size = 20 * self.file_write_interval_ # FIXME: magic number
@@ -650,14 +649,14 @@ class MainWindow(QMainWindow):
 		if self.is_searching_ or not self.serial_.isOpen() or self.select_servo_.id_ < 0:
 			return
 
-		self.ui.positionLabel.setText(str(self.latest_status_["pos"]))
-		self.ui.torqueLabel.setText(str(self.latest_status_["torque"]))
-		self.ui.speedLabel.setText(str(self.latest_status_["speed"]))
-		self.ui.currentLabel.setText(str(self.latest_status_["current"]))
-		self.ui.temperatureLabel.setText(str(self.latest_status_["temp"]))
-		self.ui.voltageLabel.setText("%.1fV" % (self.latest_status_["voltage"] * 0.1))
-		self.ui.movingLabel.setText(str(self.latest_status_["move"]))
-		self.ui.goalLabel.setText(str(self.latest_status_["goal"]))
+		self.ui.positionLabel.setText(str(self.latest_pos_))
+		self.ui.torqueLabel.setText(str(self.latest_torque_))
+		self.ui.speedLabel.setText(str(self.latest_speed_))
+		self.ui.currentLabel.setText(str(self.latest_current_))
+		self.ui.temperatureLabel.setText(str(self.latest_temp_))
+		self.ui.voltageLabel.setText("%.1fV" % (self.latest_voltage_ * 0.1))
+		self.ui.movingLabel.setText(str(self.latest_move_))
+		self.ui.goalLabel.setText(str(self.latest_goal_))
 
 		self.ui.graphWidget.series['pos'].visible = self.ui.posCheckBox.isChecked()
 		self.ui.graphWidget.series['torque'].visible = self.ui.torqueCheckBox.isChecked()
@@ -674,39 +673,39 @@ class MainWindow(QMainWindow):
 		if self.isServoValidNow():
 			if self.select_servo_.model_ == "SCS":
 				if count == 0:
-					self.latest_status_["pos"] = self.scs_proto_.read_position(self.select_servo_.id_)
-					self.latest_status_["torque"] = self.scs_proto_.read_load(self.select_servo_.id_)
+					self.latest_pos_ = self.scs_proto_.read_position(self.select_servo_.id_)
+					self.latest_torque_ = self.scs_proto_.read_load(self.select_servo_.id_)
 				elif count == 1:
-					self.latest_status_["speed"] = self.scs_proto_.read_speed(self.select_servo_.id_)
-					self.latest_status_["current"] = self.scs_proto_.read_current(self.select_servo_.id_)
+					self.latest_speed_ = self.scs_proto_.read_speed(self.select_servo_.id_)
+					self.latest_current_ = self.scs_proto_.read_current(self.select_servo_.id_)
 				elif count == 2:
-					self.latest_status_["temp"] = self.scs_proto_.read_temperature(self.select_servo_.id_)
-					self.latest_status_["voltage"] = self.scs_proto_.read_voltage(self.select_servo_.id_)
-					self.latest_status_["move"] = self.scs_proto_.read_move(self.select_servo_.id_)
-					self.latest_status_["goal"] = self.scs_proto_.read_goal(self.select_servo_.id_)
-					self.ui.graphWidget.append_data(self.lates_status_['pos'],
-						self.latest_status_['torque'],
-						self.latest_status_['speed'],
-						self.latest_status_['current'],
-						self.latest_status_['temp'],
-						self.latest_status_['voltage'])
+					self.latest_temp_ = self.scs_proto_.read_temperature(self.select_servo_.id_)
+					self.latest_voltage_ = self.scs_proto_.read_voltage(self.select_servo_.id_)
+					self.latest_move_ = self.scs_proto_.read_move(self.select_servo_.id_)
+					self.latest_goal_ = self.scs_proto_.read_goal(self.select_servo_.id_)
+					self.ui.graphWidget.append_data(self.latest_pos_,
+						self.latest_torque_,
+						self.latest_speed_,
+						self.latest_current_,
+						self.latest_temp_,
+						self.latest_voltage_)
 			else:
 				if count == 0:
-					self.latest_status_["pos"] = self.sms_sts_proto_.read_position(self.select_servo_.id_)
-					self.latest_status_["torque"] = self.sms_sts_proto_.read_load(self.select_servo_.id_)
+					self.latest_pos_ = self.sms_sts_proto_.read_position(self.select_servo_.id_)
+					self.latest_torque_ = self.sms_sts_proto_.read_load(self.select_servo_.id_)
 				elif count == 1:
-					self.latest_status_["speed"] = self.sms_sts_proto_.read_speed(self.select_servo_.id_)
-					self.latest_status_["current"] = self.sms_sts_proto_.read_current(self.select_servo_.id_)
-					self.latest_status_["temp"] = self.sms_sts_proto_.read_temperature(self.select_servo_.id_)
+					self.latest_speed_ = self.sms_sts_proto_.read_speed(self.select_servo_.id_)
+					self.latest_current_ = self.sms_sts_proto_.read_current(self.select_servo_.id_)
+					self.latest_temp_ = self.sms_sts_proto_.read_temperature(self.select_servo_.id_)
 				elif count == 2:
-					self.latest_status_["voltage"] = self.sms_sts_proto_.read_voltage(self.select_servo_.id_)
-					self.latest_status_["move"] = self.sms_sts_proto_.read_move(self.select_servo_.id_)
-					self.latest_status_["goal"] = self.sms_sts_proto_.read_goal(self.select_servo_.id_)
-					self.ui.graphWidget.append_data(self.lates_status_['pos'],
-						self.latest_status_['torque'],
-						self.latest_status_['speed'],
-						self.latest_status_['current'],
-						self.latest_status_['temp'],
-						self.latest_status_['voltage'])
+					self.latest_voltage_ = self.sms_sts_proto_.read_voltage(self.select_servo_.id_)
+					self.latest_move_ = self.sms_sts_proto_.read_move(self.select_servo_.id_)
+					self.latest_goal_ = self.sms_sts_proto_.read_goal(self.select_servo_.id_)
+					self.ui.graphWidget.append_data(self.latest_pos_,
+						self.latest_torque_,
+						self.latest_speed_,
+						self.latest_current_,
+						self.latest_temp_,
+						self.latest_voltage_)
 
 		count = (count + 1) % 3
