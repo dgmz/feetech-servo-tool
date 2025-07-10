@@ -7,5 +7,6 @@ app = QApplication(sys.argv)
 
 window = MainWindow()
 window.show()
+window.setFixedSize(window.size())
 
 app.exec()
