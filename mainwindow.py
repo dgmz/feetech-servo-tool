@@ -3,6 +3,7 @@ from PyQt6 import QtWidgets, QtSerialPort, QtCore, QtGui
 from PyQt6.QtWidgets import QMainWindow
 from PyQt6.QtGui import QIntValidator, QRegularExpressionValidator
 from ui_mainwindow import Ui_MainWindow
+import serial.tools.list_ports
 import servo
 
 I32_MAX = 2 ** 31 - 1
@@ -294,8 +295,8 @@ class MainWindow(QMainWindow):
 
 		previous = self.ui.ComComboBox.currentText()
 		self.ui.ComComboBox.clear()
-		for info in QtSerialPort.QSerialPortInfo.availablePorts():
-			self.ui.ComComboBox.addItem(info.portName())
+		for info in serial.tools.list_ports.comports():
+			self.ui.ComComboBox.addItem(info.device)
 		self.ui.ComComboBox.setCurrentIndex(self.ui.ComComboBox.findText(previous))
 			
 		
