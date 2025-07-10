@@ -96,7 +96,7 @@
          </widget>
         </item>
         <item row="2" column="0">
-         <widget class="QLabel" name="label_4">
+         <widget class="QLabel" name="ParityLabel">
           <property name="text">
            <string>DParity</string>
           </property>

@@ -71,7 +71,9 @@ class MainWindow(QMainWindow):
 		# window
 		self.ui = Ui_MainWindow()
 		self.ui.setupUi(self)
-		self.setWindowTitle("FT Servo Debug pyQt")
+		self.ui.ParityComboBox.setEnabled(False)
+		self.ui.ParityLabel.setEnabled(False)
+		self.setWindowTitle("Feetech Servo Tool")
 		
 		self.select_servo_ = servo.Servo()
 
