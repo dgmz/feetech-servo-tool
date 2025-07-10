@@ -136,6 +136,9 @@ class MainWindow(QMainWindow):
 		self.setIntRangeLineEdit(self.ui.timeoutLineEdit, 0, 10_000)
 		self.onPortSearchTimerTimeout() # fake event
 		self.ui.ComOpenButton.clicked.connect(self.onConnectButtonClicked)
+		self.port_search_timer_ = QtCore.QTimer(self)
+		self.port_search_timer_.timeout.connect(self.onPortSearchTimerTimeout)
+		self.port_search_timer_.start(1000)
 
 	def setupServoList(self):
 		self.ui.SearchButton.clicked.connect(self.onSearchButtonClicked)
@@ -288,10 +291,13 @@ class MainWindow(QMainWindow):
 		#print("port seach timeout")
 		if self.serial_.isOpen():
 			return
-		
+
+		previous = self.ui.ComComboBox.currentText()
 		self.ui.ComComboBox.clear()
 		for info in QtSerialPort.QSerialPortInfo.availablePorts():
 			self.ui.ComComboBox.addItem(info.portName())
+		self.ui.ComComboBox.setCurrentIndex(self.ui.ComComboBox.findText(previous))
+			
 		
 	def onConnectButtonClicked(self):
 		if self.serial_.isOpen():
