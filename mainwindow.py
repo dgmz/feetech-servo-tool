@@ -49,16 +49,26 @@ class ServoBus:
 		self.end_ = end
 
 	def read_byte(self, id, address):
-		pass
+		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
+		data, result, error = packet_handler.read1ByteTxRx(id, address)
+		if result == 0:
+			return data
 
 	def read_word(self, id, address):
-		pass
+		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
+		data, result, error = packet_handler.read2ByteTxRx(id, address)
+		if result == 0:
+			return data
 
 	def write_byte(self, id, address, value):
-		pass
+		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
+		result, error = packet_handler.write1ByteTxRx(id, address, value)
+		return result
 
 	def write_word(self, id, address, value):
-		pass
+		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
+		result, error = packet_handler.write2ByteTxRx(id, address, value)
+		return result
 
 class ServoProtocol:
 	def __init__(self):
@@ -225,7 +235,7 @@ class MainWindow(QMainWindow):
 		self.prog_timer_ = QtCore.QTimer(self)
 		self.prog_timer_.timeout.connect(self.onProgTimerTimeout)
 		self.prog_timer_.start(50)
-		self.updateProgMemTable()
+		#self.updateProgMemTable()
 		
 	def setEnableComSettings(self, state):
 		self.ui.ComComboBox.setEnabled(state)
