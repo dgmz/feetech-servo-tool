@@ -367,9 +367,8 @@ class MainWindow(QMainWindow):
 			self.ui.ServoSearchText.setText("Stop")
 		else:
 			self.ui.ServoSearchText.setText(f"Ping ID:{self.search_id_} Servo...")
-			ret = self.servo_bus_.ping(self.search_id_)
-			if 0 == ret:
-				mid = self.servo_bus_.read_model_number(self.search_id_)
+			mid = self.servo_bus_.read_model_number(self.search_id_)
+			if 0 != mid:
 				name = servo.getModelType(mid)
 				self.appendServoList(self.search_id_, name)
 				self.id_list_ += [self.search_id_]
