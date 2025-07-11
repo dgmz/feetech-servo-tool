@@ -71,8 +71,8 @@ class ServoBus:
 		return result
 
 class ServoProtocol:
-	def __init__(self):
-		pass
+	def __init__(self, bus):
+		self.bus_ = bus
 	def enable_torque(self, id, enable):
 		pass
 	def rotation_mode(self, id):
@@ -80,21 +80,21 @@ class ServoProtocol:
 	def write_pos_ex(self, id, goal, zero1, zero2):
 		pass
 	def read_position(self, id):
-		return 2000
+		return self.bus_.read_word(id, 56)
 	def read_load(self, id):
-		return 100
+		return self.bus_.read_word(id, 60)
 	def read_speed(self, id):
-		return 200
+		return self.bus_.read_word(id, 58)
 	def read_current(self, id):
-		return 300
+		return self.bus_.read_word(id, 60)
 	def read_temperature(self, id):
-		return 400
+		return self.bus_.read_byte(id, 63)
 	def read_voltage(self, id):
-		return 600
+		return self.bus_.read_byte(id, 62)
 	def read_move(self, id):
-		return 1
+		return self.bus_.read_byte(id, 66)
 	def read_goal(self, id):
-		return 700
+		return self.bus_.read_word(id, 42)
 
 class MainWindow(QMainWindow):
 	def __init__(self, parent=None):
@@ -115,8 +115,8 @@ class MainWindow(QMainWindow):
 		#serial port
 		self.servo_bus_ = ServoBus()
 		
-		self.sms_sts_proto_ = ServoProtocol()
-		self.scs_proto_ = ServoProtocol()
+		self.sms_sts_proto_ = ServoProtocol(self.servo_bus_)
+		self.scs_proto_ = ServoProtocol(self.servo_bus_)
 
 		self.setupComSettings()
 		self.setupServoList()
@@ -144,6 +144,7 @@ class MainWindow(QMainWindow):
 		self.record_section_data_ = ""
 		self.is_mem_writing_ = False
 
+		self.count_ = 0
 		self.latest_pos_ = 0
 		self.latest_goal_ = 0
 		self.latest_torque_ = 0
@@ -427,9 +428,9 @@ class MainWindow(QMainWindow):
 			return
 
 		if self.select_servo_.model_ == "SCS":
-			self.scs_proto_.enable_torque(self.select_servo_.id_, self.ui.torqueEnableCheckbox.isChecked())
+			self.scs_proto_.enable_torque(self.select_servo_.id_, self.ui.torqueEnableCheckBox.isChecked())
 		else:
-			self.sms_sts_proto_.enable_torque(self.select_servo_.id_, self.ui.torqueEnableCheckbox.isChecked())
+			self.sms_sts_proto_.enable_torque(self.select_servo_.id_, self.ui.torqueEnableCheckBox.isChecked())
 
 	def onModeRadioButtonsToggled(self, checked):
 		if checked:
@@ -689,16 +690,16 @@ class MainWindow(QMainWindow):
 		if self.ui.tabWidget.currentIndex() != 0:
 			return
 
-		count = 0
 		if self.isServoValidNow():
 			if self.select_servo_.model_ == "SCS":
-				if count == 0:
+				if self.count_ == 0:
 					self.latest_pos_ = self.scs_proto_.read_position(self.select_servo_.id_)
+					print(f"pos: {self.latest_pos_}")
 					self.latest_torque_ = self.scs_proto_.read_load(self.select_servo_.id_)
-				elif count == 1:
+				elif self.count_ == 1:
 					self.latest_speed_ = self.scs_proto_.read_speed(self.select_servo_.id_)
 					self.latest_current_ = self.scs_proto_.read_current(self.select_servo_.id_)
-				elif count == 2:
+				elif self.count_ == 2:
 					self.latest_temp_ = self.scs_proto_.read_temperature(self.select_servo_.id_)
 					self.latest_voltage_ = self.scs_proto_.read_voltage(self.select_servo_.id_)
 					self.latest_move_ = self.scs_proto_.read_move(self.select_servo_.id_)
@@ -710,14 +711,14 @@ class MainWindow(QMainWindow):
 						self.latest_temp_,
 						self.latest_voltage_)
 			else:
-				if count == 0:
+				if self.count_ == 0:
 					self.latest_pos_ = self.sms_sts_proto_.read_position(self.select_servo_.id_)
 					self.latest_torque_ = self.sms_sts_proto_.read_load(self.select_servo_.id_)
-				elif count == 1:
+				elif self.count_ == 1:
 					self.latest_speed_ = self.sms_sts_proto_.read_speed(self.select_servo_.id_)
 					self.latest_current_ = self.sms_sts_proto_.read_current(self.select_servo_.id_)
 					self.latest_temp_ = self.sms_sts_proto_.read_temperature(self.select_servo_.id_)
-				elif count == 2:
+				elif self.count_ == 2:
 					self.latest_voltage_ = self.sms_sts_proto_.read_voltage(self.select_servo_.id_)
 					self.latest_move_ = self.sms_sts_proto_.read_move(self.select_servo_.id_)
 					self.latest_goal_ = self.sms_sts_proto_.read_goal(self.select_servo_.id_)
@@ -728,4 +729,4 @@ class MainWindow(QMainWindow):
 						self.latest_temp_,
 						self.latest_voltage_)
 
-		count = (count + 1) % 3
+		self.count_ = (self.count_ + 1) % 3
