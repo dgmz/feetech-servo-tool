@@ -339,9 +339,9 @@ class MainWindow(QMainWindow):
 			print("bus not open")
 			return
 			
-		self.is_searching = not self.is_searching_
+		self.is_searching_ = not self.is_searching_
 
-		if self.is_searching:
+		if self.is_searching_:
 			self.ui.SearchButton.setText("Stop")
 			self.clearServoList()
 			self.id_list_.clear()
