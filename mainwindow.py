@@ -70,15 +70,27 @@ class ServoBus:
 		result, error = packet_handler.write2ByteTxRx(id, address, value)
 		return result
 
+	def write(self, id, address, buffer):
+		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
+		result, error = packet_handler.writeTxRx(id, address, len(buffer), buffer)
+		return result
+
 class ServoProtocol:
 	def __init__(self, bus):
 		self.bus_ = bus
+	def firstb(self, val):
+		return (val >> 8) & 0xFF if self.bus_.end_ else val & 0xFF
+	def secondb(self, val):
+		return val & 0xFF if self.bus_.end_ else (val >> 8) & 0xFF
 	def enable_torque(self, id, enable):
-		pass
+		return self.bus_.write_byte(id, 40, enable)
 	def rotation_mode(self, id):
-		pass
-	def write_pos_ex(self, id, goal, zero1, zero2):
-		pass
+		return self.bus_.write_byte(id, 33, 0)
+	def write_pos_ex(self, id, goal, speed, acc):
+		if goal < 0:
+			goal = (-goal) | 0x8000
+		buf = [acc, self.firstb(goal), self.secondb(goal), 0, 0, self.firstb(speed), self.secondb(speed)]
+		return self.bus_.write(id, 41, buf)
 	def read_position(self, id):
 		return self.bus_.read_word(id, 56)
 	def read_load(self, id):
@@ -236,7 +248,6 @@ class MainWindow(QMainWindow):
 		self.prog_timer_ = QtCore.QTimer(self)
 		self.prog_timer_.timeout.connect(self.onProgTimerTimeout)
 		self.prog_timer_.start(50)
-		#self.updateProgMemTable()
 		
 	def setEnableComSettings(self, state):
 		self.ui.ComComboBox.setEnabled(state)
@@ -307,7 +318,11 @@ class MainWindow(QMainWindow):
 		return servo.MemConfig.get(series)
 	
 	def writePos(self, pos, time, speed, acc):
-		pass
+		if self.select_servo_.model_ == "SCS":
+			self.scs_serial_.write_pos(self.select_servo_.id_, pos, time, speed)
+		else:
+			self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
+			self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, pos, speed, acc)
 		
 	def syncWritePos(pos, time, speed, acc):
 		pass
@@ -414,6 +429,7 @@ class MainWindow(QMainWindow):
 		self.ui.goalSlider.setValue(goal)
 
 		if not self.isServoValidNow():
+			print("servo not valid")
 			return
 
 		if self.mode_ == "REG_WRITE":
