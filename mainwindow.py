@@ -303,10 +303,7 @@ class MainWindow(QMainWindow):
 		self.updateProgMemTable()
 	
 	def getMemConfig(self, series):
-		if series == "SCS":
-			return servo.SCSMemConfig
-		else:
-			return servo.STSMemConfig
+		return servo.MemConfig.get(series)
 	
 	def writePos(self, pos, time, speed, acc):
 		pass
