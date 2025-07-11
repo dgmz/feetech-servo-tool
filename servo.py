@@ -264,7 +264,7 @@ ServoModels = {
 }
 
 def getModelType(mid):
-	return ServoModels.get(mid)
+	return ServoModels.get(mid, "Unknown")
 
 def getModelSeries(name):
 	return "STS"
