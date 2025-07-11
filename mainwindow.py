@@ -471,7 +471,7 @@ class MainWindow(QMainWindow):
 			return
 
 		if self.sweep_running_:
-			self.sweep_running = False
+			self.sweep_running_ = False
 			self.ui.sweepButton.setText("Sweep")
 			self.ui.stepButton.setEnabled(True)
 			self.auto_debug_timer_.stop()
@@ -504,11 +504,11 @@ class MainWindow(QMainWindow):
 			self.ui.sweepButton.setEnabled(False)
 			self.latest_auto_debug_goal_ = int(self.ui.startLineEdit.text())
 			if self.select_servo_.model_ == "SCS":
-				self.scs_proto_.write_pos(select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
+				self.scs_proto_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			else:
 				self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
-				self.sms_sts_proto_.write_pos(select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
-			self.auto_debug_timer.start(int(self.ui.stepDelayLineEdit.text()))
+				self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
+			self.auto_debug_timer_.start(int(self.ui.stepDelayLineEdit.text()))
 		
 	def onAutoDebugTimerTimeout(self):
 		if not self.isServoValidNow():
@@ -521,7 +521,7 @@ class MainWindow(QMainWindow):
 			self.ui.stepButton.setEnabled(True)
 			return
 
-		if self.seep_running_:
+		if self.sweep_running_:
 			start = int(self.ui.startLineEdit.text())
 			end = int(self.ui.endLineEdit.text())
 			if self.latest_auto_debug_goal_ == start:
