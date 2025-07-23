@@ -1,3 +1,5 @@
+#!/bin/env python
+
 from PyQt6.QtWidgets import QApplication
 from mainwindow import MainWindow
 
