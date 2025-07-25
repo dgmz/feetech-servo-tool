@@ -275,4 +275,38 @@ class Servo:
 	def __init__(self):
 		self.model_ = None
 		self.id_ = -1
-	
+		self.bus_ = None # FIXME
+	def firstb(self, val):
+		return (val >> 8) & 0xFF if self.bus_.end_ else val & 0xFF
+	def secondb(self, val):
+		return val & 0xFF if self.bus_.end_ else (val >> 8) & 0xFF
+	def enable_torque(self, id, enable):
+		return self.bus_.write_byte(id, 40, enable)
+	def rotation_mode(self, id):
+		return self.bus_.write_byte(id, 33, 0)
+	def write_pos_ex(self, id, goal, speed, acc):
+		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
+		res, error = handler.WritePosEx(id, goal, speed, acc)
+		return res
+	def read_position(self, id):
+		#return self.bus_.read_word(id, 56)
+		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
+		pos, res, error = handler.ReadPos(id)
+		return pos
+	def read_load(self, id):
+		return self.bus_.read_word(id, 60)
+	def read_speed(self, id):
+		#return self.bus_.read_word(id, 58)
+		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
+		speed, res, error = handler.ReadSpeed(id)
+		return speed
+	def read_current(self, id):
+		return self.bus_.read_word(id, 60)
+	def read_temperature(self, id):
+		return self.bus_.read_byte(id, 63)
+	def read_voltage(self, id):
+		return self.bus_.read_byte(id, 62)
+	def read_move(self, id):
+		return self.bus_.read_byte(id, 66)
+	def read_goal(self, id):
+		return self.bus_.read_word(id, 42)
