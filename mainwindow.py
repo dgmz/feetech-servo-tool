@@ -57,6 +57,7 @@ class MainWindow(QMainWindow):
 		self.ui.ParityComboBox.setEnabled(False)
 		self.ui.ParityLabel.setEnabled(False)
 		self.setWindowTitle("Feetech Servo Tool")
+		self.setWindowIcon(QtGui.QIcon("icons/feetech-tool.png"))
 		
 		self.select_servo_ = servo.Servo()
 
