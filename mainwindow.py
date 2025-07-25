@@ -6,74 +6,9 @@ from ui_mainwindow import Ui_MainWindow
 import serial.tools.list_ports
 import scservo_sdk
 import servo
+from servobus import ServoBus
 
 I32_MAX = 2 ** 31 - 1
-
-class ServoBus:
-	def __init__(self):
-		self.port_handler_ = None
-		self.end_ = 0
-
-	def open(self, port_name):
-		if self.port_handler_ is not None:
-			return False
-		handler = scservo_sdk.PortHandler(port_name)
-		if handler.openPort():
-			self.port_handler_ = handler
-		return self.port_handler_ is not None
-
-	def is_open(self):
-		return self.port_handler_ is not None
-
-	def close(self):
-		self.port_handler_.closePort()
-		self.port_handler_ = None
-
-	def set_baudrate(self, baudrate):
-		return self.port_handler_.setBaudRate(baudrate)
-	
-	def set_timeout(self, t):
-		self.port_handler_.setPacketTimeoutMillis(t)
-		
-	def ping(self, id):
-		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
-		model, result, error = packet_handler.ping(id)
-		return result
-
-	def read_model_number(self, id):
-		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
-		model, result, error = packet_handler.ping(id)
-		return model
-
-	def set_end(self, end):
-		self.end_ = end
-
-	def read_byte(self, id, address):
-		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
-		data, result, error = packet_handler.read1ByteTxRx(id, address)
-		if result == 0:
-			return data
-
-	def read_word(self, id, address):
-		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
-		data, result, error = packet_handler.read2ByteTxRx(id, address)
-		if result == 0:
-			return data
-
-	def write_byte(self, id, address, value):
-		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
-		result, error = packet_handler.write1ByteTxRx(id, address, value)
-		return result
-
-	def write_word(self, id, address, value):
-		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
-		result, error = packet_handler.write2ByteTxRx(id, address, value)
-		return result
-
-	def write(self, id, address, buffer):
-		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
-		result, error = packet_handler.writeTxRx(id, address, len(buffer), buffer)
-		return result
 
 class ServoProtocol:
 	def __init__(self, bus):
@@ -87,16 +22,21 @@ class ServoProtocol:
 	def rotation_mode(self, id):
 		return self.bus_.write_byte(id, 33, 0)
 	def write_pos_ex(self, id, goal, speed, acc):
-		if goal < 0:
-			goal = (-goal) | 0x8000
-		buf = [acc, self.firstb(goal), self.secondb(goal), 0, 0, self.firstb(speed), self.secondb(speed)]
-		return self.bus_.write(id, 41, buf)
+		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
+		res, error = handler.WritePosEx(id, goal, speed, acc)
+		return res
 	def read_position(self, id):
-		return self.bus_.read_word(id, 56)
+		#return self.bus_.read_word(id, 56)
+		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
+		pos, res, error = handler.ReadPos(id)
+		return pos
 	def read_load(self, id):
 		return self.bus_.read_word(id, 60)
 	def read_speed(self, id):
-		return self.bus_.read_word(id, 58)
+		#return self.bus_.read_word(id, 58)
+		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
+		speed, res, error = handler.ReadSpeed(id)
+		return speed
 	def read_current(self, id):
 		return self.bus_.read_word(id, 60)
 	def read_temperature(self, id):
