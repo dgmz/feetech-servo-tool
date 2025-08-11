@@ -29,8 +29,8 @@ class SimpleGraphWidget(QWidget):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.series = {
-			"pos":     Series(300, QtGui.QColor("black"),       1.0,     0, 4000),
-			"torque":  Series(300, QtGui.QColor("red"),      1.0, -1000, 1000),
+			"pos":     Series(300, QtGui.QColor("black"),       1.0,     0, 4095),
+			"torque":  Series(300, QtGui.QColor("red"),         1.0, -1000, 1000),
 			"speed":   Series(300, QtGui.QColor("green"),       0.2, -1000, 1000),
 			"current": Series(300, QtGui.QColor("cyan"),        1.0, -1000, 1000),
 			"temp":    Series(300, QtGui.QColor("yellowgreen"), 1.0, -1000, 1000),
