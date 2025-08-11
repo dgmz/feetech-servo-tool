@@ -4,7 +4,8 @@ from collections import deque
 
 
 def mapping(val, in_min, in_max, out_min, out_max):
-	return (val - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+	val_w = in_min + ((val - in_min) % (in_max - in_min + 1)) #wrap range
+	return out_min + (val_w - in_min) * (out_max - out_min) / (in_max - in_min)
 
 class Series:
 	def __init__(self, maxlen, color, gain, min, max):
