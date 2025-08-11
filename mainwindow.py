@@ -320,6 +320,8 @@ class MainWindow(QMainWindow):
 			self.search_timer_.start(1)
 	
 	def onServoListSelection(self):
+		if self.is_searching_:
+			self.onSearchButtonClicked()
 		selectedRows = self.ui.ServoListView.selectionModel().selectedRows()
 		row = selectedRows[0].row()
 		index = self.servo_list_model_.index(row, 0)
