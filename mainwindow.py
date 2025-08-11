@@ -9,6 +9,8 @@ import servo
 from servobus import ServoBus
 
 I32_MAX = 2 ** 31 - 1
+I16_MIN = -(2 ** 15)
+I16_MAX = 2 ** 15 - 1
 
 class MainWindow(QMainWindow):
 	def __init__(self, parent=None):
@@ -111,7 +113,7 @@ class MainWindow(QMainWindow):
 		
 		self.setIntRangeLineEdit(self.ui.accLineEdit, 0, I32_MAX)
 		self.setIntRangeLineEdit(self.ui.speedLineEdit, 0, I32_MAX)
-		self.setIntRangeLineEdit(self.ui.goalLineEdit, 0, 4095)
+		self.setIntRangeLineEdit(self.ui.goalLineEdit, I16_MIN, I16_MAX)
 		self.setIntRangeLineEdit(self.ui.timeLineEdit, 0, I32_MAX)
 		
 		self.ui.setPushButton.clicked.connect(self.onSetButtonClicked)
