@@ -315,7 +315,11 @@ class Servo:
 		pos, res, error = handler.ReadPos(id)
 		return pos
 	def read_load(self, id):
-		return self.bus_.read_word(id, 60)
+		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
+		val, res, error = handler.read2ByteTxRx(id, 60)
+		if 0 == res:
+			return handler.scs_tohost(val, 10)
+		return None
 	def read_speed(self, id):
 		#return self.bus_.read_word(id, 58)
 		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
