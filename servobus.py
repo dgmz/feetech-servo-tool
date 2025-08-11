@@ -65,3 +65,8 @@ class ServoBus:
 		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
 		result, error = packet_handler.writeTxRx(id, address, len(buffer), buffer)
 		return result
+
+	def reg_write_action(self, id):
+		packet_handler = scservo_sdk.protocol_packet_handler(self.port_handler_, self.end_)
+		result = packet_handler.action(id)
+		return result

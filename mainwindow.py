@@ -10,44 +10,6 @@ from servobus import ServoBus
 
 I32_MAX = 2 ** 31 - 1
 
-class ServoProtocol:
-	def __init__(self, bus):
-		self.bus_ = bus
-	def firstb(self, val):
-		return (val >> 8) & 0xFF if self.bus_.end_ else val & 0xFF
-	def secondb(self, val):
-		return val & 0xFF if self.bus_.end_ else (val >> 8) & 0xFF
-	def enable_torque(self, id, enable):
-		return self.bus_.write_byte(id, 40, enable)
-	def rotation_mode(self, id):
-		return self.bus_.write_byte(id, 33, 0)
-	def write_pos_ex(self, id, goal, speed, acc):
-		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
-		res, error = handler.WritePosEx(id, goal, speed, acc)
-		return res
-	def read_position(self, id):
-		#return self.bus_.read_word(id, 56)
-		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
-		pos, res, error = handler.ReadPos(id)
-		return pos
-	def read_load(self, id):
-		return self.bus_.read_word(id, 60)
-	def read_speed(self, id):
-		#return self.bus_.read_word(id, 58)
-		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
-		speed, res, error = handler.ReadSpeed(id)
-		return speed
-	def read_current(self, id):
-		return self.bus_.read_word(id, 60)
-	def read_temperature(self, id):
-		return self.bus_.read_byte(id, 63)
-	def read_voltage(self, id):
-		return self.bus_.read_byte(id, 62)
-	def read_move(self, id):
-		return self.bus_.read_byte(id, 66)
-	def read_goal(self, id):
-		return self.bus_.read_word(id, 42)
-
 class MainWindow(QMainWindow):
 	def __init__(self, parent=None):
 		super(QMainWindow, self).__init__(parent)
@@ -59,7 +21,7 @@ class MainWindow(QMainWindow):
 		self.setWindowTitle("Feetech Servo Tool")
 		self.setWindowIcon(QtGui.QIcon("icons/feetech-tool.png"))
 		
-		self.select_servo_ = servo.Servo()
+		self.select_servo_ = servo.Servo(None)
 
 		# timer
 		self.graph_timer_ = QtCore.QTimer(self)
@@ -68,8 +30,8 @@ class MainWindow(QMainWindow):
 		#serial port
 		self.servo_bus_ = ServoBus()
 		
-		self.sms_sts_proto_ = ServoProtocol(self.servo_bus_)
-		self.scs_proto_ = ServoProtocol(self.servo_bus_)
+		self.sms_sts_proto_ = servo.Servo(self.servo_bus_)
+		self.scs_proto_ = servo.Servo(self.servo_bus_)
 
 		self.setupComSettings()
 		self.setupServoList()
@@ -260,16 +222,25 @@ class MainWindow(QMainWindow):
 	
 	def writePos(self, pos, time, speed, acc):
 		if self.select_servo_.model_ == "SCS":
-			self.scs_serial_.write_pos(self.select_servo_.id_, pos, time, speed)
+			self.scs_proto_.write_pos(self.select_servo_.id_, pos, time, speed)
 		else:
 			self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
 			self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, pos, speed, acc)
 		
-	def syncWritePos(pos, time, speed, acc):
-		pass
+	def syncWritePos(self, pos, time, speed, acc):
+		self.id_list_
+		n = len(self.id_list_)
+		if self.select_servo_.model_ == "SCS":
+			self.scs_proto_.sync_write_pos(self.id_list_, [pos]*n, [time]*n, [speed]*n)
+		else:
+			self.sms_sts_proto_.sync_write_pos_ex(self.id_list_, [pos]*n, [speed]*n, [acc]*n)
 	
-	def regWritePoss(self, pos, time, speed, acc):
-		pass
+	def regWritePos(self, pos, time, speed, acc):
+		if self.select_servo_.model_ == "SCS":
+			self.scs_proto_.reg_write_pos(self.select_servo_.id_, pos, time, speed)
+		else:
+			self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
+			self.sms_sts_proto_.reg_write_pos_ex(self.select_servo_.id_, pos, speed, acc)
 	
 	def onPortSearchTimerTimeout(self):
 		#print("port seach timeout")
@@ -401,7 +372,7 @@ class MainWindow(QMainWindow):
 			self.ui.actionPushButton.setEnabled(self.mode_ == "REG_WRITE")
 	
 	def onActionButtonClicked(self):
-		if self.isServoValidNow():
+		if not self.isServoValidNow():
 			return
 
 		if self.mode_ == "REG_WRITE":

@@ -1,5 +1,6 @@
 
 from collections import namedtuple
+import scservo_sdk
 
 MemItem = namedtuple("MemItem", ["address", "name", "size", "default_value", "direction", "is_eprom", "is_readonly", "min", "max"])
 
@@ -272,10 +273,10 @@ def getModelSeries(name):
 		else "SMCL"
 
 class Servo:
-	def __init__(self):
+	def __init__(self, bus):
 		self.model_ = None
 		self.id_ = -1
-		self.bus_ = None # FIXME
+		self.bus_ = bus
 	def firstb(self, val):
 		return (val >> 8) & 0xFF if self.bus_.end_ else val & 0xFF
 	def secondb(self, val):
@@ -284,9 +285,29 @@ class Servo:
 		return self.bus_.write_byte(id, 40, enable)
 	def rotation_mode(self, id):
 		return self.bus_.write_byte(id, 33, 0)
+	def write_pos(self, id, goal, time, speed):
+		# TODO: implement?
+		raise NotImplementedError
 	def write_pos_ex(self, id, goal, speed, acc):
 		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
 		res, error = handler.WritePosEx(id, goal, speed, acc)
+		return res
+	def sync_write_pos(self, ids, goals, times, speeds):
+		#TODO: implement?
+		raise NotImplementedError
+	def sync_write_pos_ex(self, ids, goals, speeds, accels):
+		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
+		for i in range(len(ids)):
+			#FIXME: handle errors
+			handler.SyncWritePosEx(ids[i], goals[i], speeds[i], accels[i])
+			res = handler.groupSyncWrite.txPacket()
+		return res
+	def reg_write_pos(self, id, goal, time, speed):
+		#TODO: implement?
+		raise NotImplementedError
+	def reg_write_pos_ex(self, id, goal, speed, acc):
+		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
+		res, error = handler.RegWritePosEx(id, goal, speed, acc)
 		return res
 	def read_position(self, id):
 		#return self.bus_.read_word(id, 56)
