@@ -103,7 +103,7 @@ class SimpleGraphWidget(QWidget):
 			if serie.visible:
 				pen.setColor(serie.color)
 				painter.setPen(pen)
-				points = serie.plot(w, scale, hoffset, grid_y_min, grid_y_max)
+				points = serie.plot(w, scale, hoffset, grid_y_max, grid_y_min)
 				if points:
 					# drawPath() is hideously slow, use drawLine() instead
 					(x0, y0) = points[0]
@@ -115,9 +115,9 @@ class SimpleGraphWidget(QWidget):
 			if limit:
 				pen.setColor(QtGui.QColor('plum'))
 				painter.setPen(pen)
-				y = mapping(limit, -1000, 1000, grid_y_min, grid_y_max)
+				y = mapping(limit, -1000, 1000, grid_y_max, grid_y_min)
 				painter.drawLine(0, int(y), int(w), int(y))
-				y = mapping(-limit, -1000, 1000, grid_y_min, grid_y_max)
+				y = mapping(-limit, -1000, 1000, grid_y_max, grid_y_min)
 				painter.drawLine(0, int(y), int(w), int(y))
 
 if __name__ == "__main__":
