@@ -30,7 +30,7 @@ class SimpleGraphWidget(QWidget):
 		super().__init__(*args, **kwargs)
 		self.series = {
 			"pos":     Series(300, QtGui.QColor("black"),       1.0,     0, 4000),
-			"torque":  Series(300, QtGui.QColor("orange"),      1.0, -1000, 1000),
+			"torque":  Series(300, QtGui.QColor("red"),      1.0, -1000, 1000),
 			"speed":   Series(300, QtGui.QColor("green"),       0.2, -1000, 1000),
 			"current": Series(300, QtGui.QColor("cyan"),        1.0, -1000, 1000),
 			"temp":    Series(300, QtGui.QColor("yellowgreen"), 1.0, -1000, 1000),
@@ -115,9 +115,9 @@ class SimpleGraphWidget(QWidget):
 			if limit:
 				pen.setColor(QtGui.QColor('plum'))
 				painter.setPen(pen)
-				y = mapping(limit, -1000, 1000, grid_y_max, grid_y_min)
+				y = mapping(limit, -1000, 1000, grid_y_min, grid_y_max)
 				painter.drawLine(0, int(y), int(w), int(y))
-				y = mapping(-limit, -1000, 1000, grid_y_max, grid_y_min)
+				y = mapping(-limit, -1000, 1000, grid_y_min, grid_y_max)
 				painter.drawLine(0, int(y), int(w), int(y))
 
 if __name__ == "__main__":
