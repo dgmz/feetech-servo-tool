@@ -12,6 +12,12 @@ I32_MAX = 2 ** 31 - 1
 I16_MIN = -(2 ** 15)
 I16_MAX = 2 ** 15 - 1
 
+def int_or_default(v,default_v):
+	try:
+		return int(v)
+	except ValueError:
+		return default_v
+
 class MainWindow(QMainWindow):
 	def __init__(self, parent=None):
 		super(QMainWindow, self).__init__(parent)
@@ -226,7 +232,7 @@ class MainWindow(QMainWindow):
 		if self.select_servo_.model_ == "SCS":
 			self.scs_proto_.write_pos(self.select_servo_.id_, pos, time, speed)
 		else:
-			self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
+			#self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
 			self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, pos, speed, acc)
 		
 	def syncWritePos(self, pos, time, speed, acc):
@@ -241,7 +247,7 @@ class MainWindow(QMainWindow):
 		if self.select_servo_.model_ == "SCS":
 			self.scs_proto_.reg_write_pos(self.select_servo_.id_, pos, time, speed)
 		else:
-			self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
+			#self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
 			self.sms_sts_proto_.reg_write_pos_ex(self.select_servo_.id_, pos, speed, acc)
 	
 	def onPortSearchTimerTimeout(self):
@@ -266,8 +272,8 @@ class MainWindow(QMainWindow):
 			if not self.servo_bus_.open(self.ui.ComComboBox.currentText()):
 				print("Failed to open port")
 			else:
-				self.servo_bus_.set_baudrate(int(self.ui.BaudComboBox.currentText()))
-				self.servo_bus_.set_timeout(int(self.ui.timeoutLineEdit.text()))
+				self.servo_bus_.set_baudrate(int_or_default(self.ui.BaudComboBox.currentText(), 1000000))
+				self.servo_bus_.set_timeout(int_or_default(self.ui.timeoutLineEdit.text(), 50))
 				self.ui.ComOpenButton.setText("Close")
 				self.setEnableComSettings(False)
 	
@@ -317,7 +323,7 @@ class MainWindow(QMainWindow):
 		selectedRows = self.ui.ServoListView.selectionModel().selectedRows()
 		row = selectedRows[0].row()
 		index = self.servo_list_model_.index(row, 0)
-		self.select_servo_.id_ = int(self.servo_list_model_.data(index))
+		self.select_servo_.id_ = int_or_default(self.servo_list_model_.data(index), None)
 		index = self.servo_list_model_.index(row, 1)
 		self.selectServorSeries(servo.getModelSeries(str(self.servo_list_model_.data(index))))
 	
@@ -336,10 +342,10 @@ class MainWindow(QMainWindow):
 			self.writePos(goal, 0, 0, 0)
 		
 	def onSetButtonClicked(self):
-		goal = int(self.ui.goalLineEdit.text())
-		speed = int(self.ui.speedLineEdit.text())
-		acc = int(self.ui.accLineEdit.text())
-		time = int(self.ui.timeLineEdit.text())
+		goal = int_or_default(self.ui.goalLineEdit.text(), 0)
+		speed = int_or_default(self.ui.speedLineEdit.text(), 0)
+		acc = int_or_default(self.ui.accLineEdit.text(), 0)
+		time = int_or_default(self.ui.timeLineEdit.text(), 0)
 		self.ui.goalSlider.setValue(goal)
 
 		if not self.isServoValidNow():
@@ -393,14 +399,14 @@ class MainWindow(QMainWindow):
 			self.sweep_running_ = True
 			self.ui.sweepButton.setText("Stop")
 			self.ui.stepButton.setEnabled(False)
-			self.latest_auto_debug_goal_ = int(self.ui.startLineEdit.text())
+			self.latest_auto_debug_goal_ = int_or_default(self.ui.startLineEdit.text(), 0)
 
 			if self.select_servo_.model_ == "SCS":
 				self.scs_proto_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			else:
 				self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
 				self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
-			self.auto_debug_timer_.start(int(self.ui.sweepLineEdit.text()))
+			self.auto_debug_timer_.start(int_or_default(self.ui.sweepLineEdit.text(), 0))
 	
 	def onStepButtonClicked(self):
 		if not self.isServoValidNow():
@@ -416,13 +422,13 @@ class MainWindow(QMainWindow):
 			self.step_increase_ = True
 			self.ui.stepButton.setText("Stop")
 			self.ui.sweepButton.setEnabled(False)
-			self.latest_auto_debug_goal_ = int(self.ui.startLineEdit.text())
+			self.latest_auto_debug_goal_ = int_or_default(self.ui.startLineEdit.text(), 0)
 			if self.select_servo_.model_ == "SCS":
 				self.scs_proto_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			else:
 				self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
 				self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
-			self.auto_debug_timer_.start(int(self.ui.stepDelayLineEdit.text()))
+			self.auto_debug_timer_.start(int_or_default(self.ui.stepDelayLineEdit.text(), 0))
 		
 	def onAutoDebugTimerTimeout(self):
 		if not self.isServoValidNow():
@@ -436,8 +442,8 @@ class MainWindow(QMainWindow):
 			return
 
 		if self.sweep_running_:
-			start = int(self.ui.startLineEdit.text())
-			end = int(self.ui.endLineEdit.text())
+			start = int_or_default(self.ui.startLineEdit.text(), 0)
+			end = int_or_default(self.ui.endLineEdit.text(), 4095)
 			if self.latest_auto_debug_goal_ == start:
 				self.latest_auto_debug_goal_ = end
 			else:
@@ -448,9 +454,9 @@ class MainWindow(QMainWindow):
 				self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
 				self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 		elif self.step_running_:
-			start = int(self.ui.startLineEdit.text())
-			end = int(self.ui.endLineEdit.text())
-			step = int(self.ui.stepLineEdit.text())
+			start = int_or_default(self.ui.startLineEdit.text(), 0)
+			end = int_or_default(self.ui.endLineEdit.text(), 4095)
+			step = int_or_default(self.ui.stepLineEdit.text(), 10)
 
 			self.latest_auto_debug_goal_ += step if self.step_increase_ else -step
 
@@ -489,7 +495,7 @@ class MainWindow(QMainWindow):
 			self.ui.clearPushButton.setEnabled(False)
 			self.record_section_data_ = ""
 			self.record_data_count_ = 0
-			rec_time = int(self.ui.recTimeLineEdit().text())
+			rec_time = int_or_default(self.ui.recTimeLineEdit().text(), 0)
 			self.file_write_interval_ = max(1, rec_time)
 			file_name = self.ui.recFileNameLineEdit.text()
 			self.record_file_name_ = os.path.expanduser(file_name)
@@ -578,13 +584,13 @@ class MainWindow(QMainWindow):
 		# TODO No address reference
 		if item.address == 5:
 			# TODO: Support non-STS servos
-			val = int(self.ui.memSetLineEdit.text())
+			val = int_or_default(self.ui.memSetLineEdit.text(), 0)
 			self.servo_bus_.write_byte(self.select_servo_.id_, 55, 0) # unlock
 			self.servo_bus_.write_byte(self.select_servo_.id_, 5, val)
 			self.servo_bus_.write_byte(self.select_servo_.id_, 55, 1) # lock
 			self.select_servo_.id_ = val
 		else:
-			val = int(self.ui.memSetLineEdit.text())
+			val = int_or_default(self.ui.memSetLineEdit.text(), 0)
 			if item.size == 2:
 				self.servo_bus_.write_word(self.select_servo_.id_, item.address, val)
 			else:
@@ -592,8 +598,8 @@ class MainWindow(QMainWindow):
 		self.is_mem_writing_ = False
 		
 	def onGraphTimerTimeout(self):
-		self.ui.graphWidget.up_limit = int(self.ui.upLimitLineEdit.text())
-		self.ui.graphWidget.down_limit = int(self.ui.downLimitLineEdit.text())
+		self.ui.graphWidget.up_limit = int_or_default(self.ui.upLimitLineEdit.text(), 0)
+		self.ui.graphWidget.down_limit = int_or_default(self.ui.downLimitLineEdit.text(), 0)
 		self.ui.graphWidget.horizontal = self.ui.horizontalSlider.value()
 		self.ui.graphWidget.zoom = self.ui.zoomSlider.value()
 
