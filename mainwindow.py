@@ -17,6 +17,7 @@ def int_or_default(v,default_v):
 	except ValueError:
 		return default_v
 
+
 class MainWindow(QMainWindow):
 	def __init__(self, parent=None):
 		super(QMainWindow, self).__init__(parent)
@@ -76,10 +77,12 @@ class MainWindow(QMainWindow):
 		self.latest_voltage_ = 0
 		self.latest_move_ = 0
 
+
 	def isServoValidNow(self):
 		return not self.is_searching_ and self.servo_bus_.is_open() \
 			and self.select_servo_.id_ >= 0
 	
+
 	def setupComSettings(self):
 		self.ui.BaudComboBox.addItems([
 			"1000000", "500000", "250000", "256000", "128000", "115200",
@@ -92,6 +95,7 @@ class MainWindow(QMainWindow):
 		self.port_search_timer_ = QtCore.QTimer(self)
 		self.port_search_timer_.timeout.connect(self.onPortSearchTimerTimeout)
 		self.port_search_timer_.start(1000)
+
 
 	def setupServoList(self):
 		self.ui.SearchButton.clicked.connect(self.onSearchButtonClicked)
@@ -108,7 +112,8 @@ class MainWindow(QMainWindow):
 		self.servo_read_timer_.start(10)
 		
 		self.ui.ServoListView.selectionModel().selectionChanged.connect(self.onServoListSelection)
-		
+
+
 	def setupServoControl(self):
 		self.ui.writeRadioButton.toggled.connect(self.onModeRadioButtonsToggled)
 		self.ui.syncWriteRadioButton.toggled.connect(self.onModeRadioButtonsToggled)
@@ -124,7 +129,8 @@ class MainWindow(QMainWindow):
 		self.ui.setPushButton.clicked.connect(self.onSetButtonClicked)
 		self.ui.torqueEnableCheckBox.stateChanged.connect(self.onTorqueEnableCheckBoxStateChanged)
 		self.ui.actionPushButton.clicked.connect(self.onActionButtonClicked)
-		
+
+
 	def setupAutoDebug(self):
 		self.setIntRangeLineEdit(self.ui.startLineEdit, 0, 4095)
 		self.setIntRangeLineEdit(self.ui.endLineEdit, 0, 4095)
@@ -137,7 +143,8 @@ class MainWindow(QMainWindow):
 		
 		self.auto_debug_timer_ = QtCore.QTimer(self)
 		self.auto_debug_timer_.timeout.connect(self.onAutoDebugTimerTimeout)
-		
+
+
 	def setupDataAnalysis(self):
 		self.ui.exportPushButton.clicked.connect(self.onExportButtonClicked)
 		self.ui.clearPushButton.clicked.connect(self.onClearButtonClicked)
@@ -146,7 +153,8 @@ class MainWindow(QMainWindow):
 		self.data_analysis_timer_ = QtCore.QTimer(self)
 		self.data_analysis_timer_.timeout.connect(self.onDataAnalysisTimerTimeout)
 		self.data_analysis_timer_.start(50)
-		
+
+
 	def setupProgramming(self):
 		self.prog_mem_model_ = QtGui.QStandardItemModel(0, 5)
 		self.ui.memoryTableView.setModel(self.prog_mem_model_)
@@ -158,13 +166,15 @@ class MainWindow(QMainWindow):
 		self.prog_timer_ = QtCore.QTimer(self)
 		self.prog_timer_.timeout.connect(self.onProgTimerTimeout)
 		self.prog_timer_.start(50)
-		
+
+
 	def setEnableComSettings(self, state):
 		self.ui.ComComboBox.setEnabled(state)
 		self.ui.BaudComboBox.setEnabled(state)
 		#self.ui.ParityComboBox.setEnabled(state)
 		self.ui.timeoutLineEdit.setEnabled(state)
-		
+
+
 	def clearServoList(self):
 		self.servo_list_model_.clear()
 		self.servo_list_model_.setHorizontalHeaderLabels(["ID", "Module"])
@@ -181,9 +191,11 @@ class MainWindow(QMainWindow):
 		view.verticalHeader().setVisible(False)
 		view.setEditTriggers(view.EditTrigger.NoEditTriggers)
 		
+
 	def appendServoList(self, id, name):
 		self.servo_list_model_.appendRow([QtGui.QStandardItem(str(id)), QtGui.QStandardItem(name)])
-	
+
+
 	def clearProgMemTable(self):
 		self.prog_mem_model_.clear()
 		self.prog_mem_model_.setHorizontalHeaderLabels(["Address", "Memory", "Value", "Area", "R/W"])
@@ -199,7 +211,8 @@ class MainWindow(QMainWindow):
 		view.setColumnWidth(3, 70)
 		view.setColumnWidth(4, 70)
 		view.setEditTriggers(view.EditTrigger.NoEditTriggers)
-		
+
+
 	def updateProgMemTable(self):
 		self.clearProgMemTable()
 		mem_config = self.getMemConfig(self.select_servo_.model_)
@@ -209,13 +222,16 @@ class MainWindow(QMainWindow):
 			rw = "R" if item.is_readonly else "R/W"
 			rowList = [QtGui.QStandardItem(str(x)) for x in (item.address, item.name, item.default_value, area, rw)]
 			self.prog_mem_model_.appendRow(rowList)
-	
+
+
 	def setIntRangeLineEdit(self, edit, minval, maxval):
 		edit.setValidator(QIntValidator(minval, maxval, self))
 	
+
 	def setIntLineEdit(self, edit):
-		edit.setValidator(QReularExpressionValidator(QtCore.QRegularExpression("-?\\d*", self)))
+		edit.setValidator(QRegularExpressionValidator(QtCore.QRegularExpression("-?\\d*", self)))
 	
+
 	def selectServorSeries(self, series):
 		if series == "SCS":
 			self.servo_bus_.set_end(1)
@@ -224,16 +240,18 @@ class MainWindow(QMainWindow):
 		self.select_servo_.model_ = series
 		self.updateProgMemTable()
 	
+
 	def getMemConfig(self, series):
 		return servo.MemConfig.get(series)
 	
+
 	def writePos(self, pos, time, speed, acc):
 		if self.select_servo_.model_ == "SCS":
 			self.scs_proto_.write_pos(self.select_servo_.id_, pos, time, speed)
 		else:
-			#self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
 			self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, pos, speed, acc)
 		
+	
 	def syncWritePos(self, pos, time, speed, acc):
 		self.id_list_
 		n = len(self.id_list_)
@@ -242,15 +260,15 @@ class MainWindow(QMainWindow):
 		else:
 			self.sms_sts_proto_.sync_write_pos_ex(self.id_list_, [pos]*n, [speed]*n, [acc]*n)
 	
+
 	def regWritePos(self, pos, time, speed, acc):
 		if self.select_servo_.model_ == "SCS":
 			self.scs_proto_.reg_write_pos(self.select_servo_.id_, pos, time, speed)
 		else:
-			#self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
 			self.sms_sts_proto_.reg_write_pos_ex(self.select_servo_.id_, pos, speed, acc)
 	
+
 	def onPortSearchTimerTimeout(self):
-		#print("port seach timeout")
 		if self.servo_bus_.is_open():
 			return
 
@@ -276,6 +294,7 @@ class MainWindow(QMainWindow):
 				self.ui.ComOpenButton.setText("Close")
 				self.setEnableComSettings(False)
 	
+
 	def onSearchButtonClicked(self):
 		if not self.servo_bus_.is_open():
 			print("bus not open")
@@ -296,6 +315,7 @@ class MainWindow(QMainWindow):
 			self.search_timer_.stop()
 			self.ui.ServoSearchText.setText("Stop")
 			
+	
 	def onSearchTimerTimeout(self):
 		#print("search timer timeout")
 		self.search_timer_.stop()
@@ -318,6 +338,7 @@ class MainWindow(QMainWindow):
 			self.search_id_ += 1
 			self.search_timer_.start(1)
 	
+
 	def onServoListSelection(self):
 		if self.is_searching_:
 			self.onSearchButtonClicked()
@@ -328,6 +349,7 @@ class MainWindow(QMainWindow):
 		index = self.servo_list_model_.index(row, 1)
 		self.selectServorSeries(servo.getModelSeries(str(self.servo_list_model_.data(index))))
 	
+
 	def onGoalSliderValueChanged(self):
 		goal = self.ui.goalSlider.value()
 		self.ui.goalLineEdit.setText(str(goal))
@@ -341,7 +363,8 @@ class MainWindow(QMainWindow):
 			self.syncWritePos(goal, 0, 0, 0)
 		elif self.mode_ == "WRITE":
 			self.writePos(goal, 0, 0, 0)
-		
+
+
 	def onSetButtonClicked(self):
 		goal = int_or_default(self.ui.goalLineEdit.text(), 0)
 		speed = int_or_default(self.ui.speedLineEdit.text(), 0)
@@ -359,7 +382,8 @@ class MainWindow(QMainWindow):
 			self.syncWritePos(goal, time, speed, acc)
 		elif self.mode_ == "WRITE":
 			self.writePos(goal, time, speed, acc)
-		
+
+
 	def onTorqueEnableCheckBoxStateChanged(self):
 		if not self.isServoValidNow():
 			return
@@ -369,6 +393,7 @@ class MainWindow(QMainWindow):
 		else:
 			self.sms_sts_proto_.enable_torque(self.select_servo_.id_, self.ui.torqueEnableCheckBox.isChecked())
 
+	
 	def onModeRadioButtonsToggled(self, checked):
 		if checked:
 			if self.ui.writeRadioButton.isChecked():
@@ -380,12 +405,14 @@ class MainWindow(QMainWindow):
 
 			self.ui.actionPushButton.setEnabled(self.mode_ == "REG_WRITE")
 	
+
 	def onActionButtonClicked(self):
 		if not self.isServoValidNow():
 			return
 
 		if self.mode_ == "REG_WRITE":
 			self.servo_bus_.reg_write_action(self.select_servo_.id_)
+
 
 	def onSweepButtonClicked(self):
 		if not self.isServoValidNow():
@@ -408,7 +435,8 @@ class MainWindow(QMainWindow):
 				self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
 				self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			self.auto_debug_timer_.start(int_or_default(self.ui.sweepLineEdit.text(), 0))
-	
+
+
 	def onStepButtonClicked(self):
 		if not self.isServoValidNow():
 			return
@@ -430,7 +458,8 @@ class MainWindow(QMainWindow):
 				self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
 				self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			self.auto_debug_timer_.start(int_or_default(self.ui.stepDelayLineEdit.text(), 0))
-		
+
+
 	def onAutoDebugTimerTimeout(self):
 		if not self.isServoValidNow():
 			self.auto_debug_timer.stop()
@@ -563,7 +592,8 @@ class MainWindow(QMainWindow):
 
 				model = self.ui.memoryTableView.model()
 				model.setData(model.index(i,2), str(val))
-		
+
+
 	def onMemoryTableSelection(self):
 		selectedRows = self.ui.memoryTableView.selectionModel().selectedRows()
 		row = selectedRows[0].row()
@@ -576,7 +606,8 @@ class MainWindow(QMainWindow):
 		item = mem_config[row]
 		self.ui.memSetLineEdit.setEnabled(not item.is_readonly)
 		self.ui.memSetButton.setEnabled(not item.is_readonly)
-		
+
+
 	def onMemSetButtonClicked(self):
 		self.is_mem_writing_ = True
 		selectedRows = self.ui.memoryTableView.selectionModel().selectedRows()
@@ -598,7 +629,8 @@ class MainWindow(QMainWindow):
 			else:
 				self.servo_bus_.write_byte(self.select_servo_.id_, item.address, val)
 		self.is_mem_writing_ = False
-		
+
+
 	def onGraphTimerTimeout(self):
 		self.ui.graphWidget.up_limit = int_or_default(self.ui.upLimitLineEdit.text(), 0)
 		self.ui.graphWidget.down_limit = int_or_default(self.ui.downLimitLineEdit.text(), 0)
@@ -623,6 +655,7 @@ class MainWindow(QMainWindow):
 		self.ui.graphWidget.series['current'].visible = self.ui.currentCheckBox.isChecked()
 		self.ui.graphWidget.series['temp'].visible = self.ui.tempCheckBox.isChecked()
 		self.ui.graphWidget.series['voltage'].visible = self.ui.voltageCheckBox.isChecked()
+
 
 	def onServoReadTimerTimeout(self):
 		if self.ui.tabWidget.currentIndex() != 0:

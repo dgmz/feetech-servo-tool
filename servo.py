@@ -199,8 +199,10 @@ MemConfig = {
 	]
 }
 
+
 def SERVO_MODEL(a,b):
 	return (b << 8) + a
+
 
 ServoModels = {
 	SERVO_MODEL(5, 0): "SCSXX",
@@ -263,8 +265,10 @@ ServoModels = {
 	SERVO_MODEL(9, 40): "SCS40-2"
 }
 
+
 def getModelType(mid):
 	return ServoModels.get(mid, "Unknown")
+
 
 def getModelSeries(name):
 	return "STS" if name.startswith("STS") \
@@ -272,29 +276,47 @@ def getModelSeries(name):
 		else "SMBL" if name.startswith("SM") and "BL" in name \
 		else "SMCL"
 
+
 class Servo:
+
 	def __init__(self, bus):
 		self.model_ = None
 		self.id_ = -1
 		self.bus_ = bus
+
+
 	def firstb(self, val):
 		return (val >> 8) & 0xFF if self.bus_.end_ else val & 0xFF
+	
+
 	def secondb(self, val):
 		return val & 0xFF if self.bus_.end_ else (val >> 8) & 0xFF
+	
+
 	def enable_torque(self, id, enable):
 		return self.bus_.write_byte(id, 40, enable)
+	
+
 	def rotation_mode(self, id):
 		return self.bus_.write_byte(id, 33, 0)
+	
+
 	def write_pos(self, id, goal, time, speed):
 		# TODO: implement?
 		raise NotImplementedError
+	
+
 	def write_pos_ex(self, id, goal, speed, acc):
 		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
 		res, error = handler.WritePosEx(id, goal, speed, acc)
 		return res
+	
+
 	def sync_write_pos(self, ids, goals, times, speeds):
 		#TODO: implement?
 		raise NotImplementedError
+	
+
 	def sync_write_pos_ex(self, ids, goals, speeds, accels):
 		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
 		for i in range(len(ids)):
@@ -302,36 +324,56 @@ class Servo:
 			handler.SyncWritePosEx(ids[i], goals[i], speeds[i], accels[i])
 			res = handler.groupSyncWrite.txPacket()
 		return res
+	
+
 	def reg_write_pos(self, id, goal, time, speed):
 		#TODO: implement?
 		raise NotImplementedError
+	
+
 	def reg_write_pos_ex(self, id, goal, speed, acc):
 		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
 		res, error = handler.RegWritePosEx(id, goal, speed, acc)
 		return res
+	
+
 	def read_position(self, id):
 		#return self.bus_.read_word(id, 56)
 		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
 		pos, res, error = handler.ReadPos(id)
 		return pos
+	
+
 	def read_load(self, id):
 		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
 		val, res, error = handler.read2ByteTxRx(id, 60)
 		if 0 == res:
 			return handler.scs_tohost(val, 10)
-		return None
+		return 0
+	
+
 	def read_speed(self, id):
 		#return self.bus_.read_word(id, 58)
 		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
 		speed, res, error = handler.ReadSpeed(id)
 		return speed
+	
+
 	def read_current(self, id):
-		return self.bus_.read_word(id, 60)
+		return self.bus_.read_word(id, 60) or 0
+	
+
 	def read_temperature(self, id):
-		return self.bus_.read_byte(id, 63)
+		return self.bus_.read_byte(id, 63) or 0
+	
+
 	def read_voltage(self, id):
-		return self.bus_.read_byte(id, 62)
+		return self.bus_.read_byte(id, 62) or 0
+	
+
 	def read_move(self, id):
-		return self.bus_.read_byte(id, 66)
+		return self.bus_.read_byte(id, 66) or 0
+	
+	
 	def read_goal(self, id):
-		return self.bus_.read_word(id, 42)
+		return self.bus_.read_word(id, 42) or 0
