@@ -541,7 +541,7 @@ class Ui_MainWindow(object):
         self.clearPushButton.setText(_translate("MainWindow", "Empty"))
         self.label_37.setText(_translate("MainWindow", "file:rows"))
         self.recTimeLineEdit.setText(_translate("MainWindow", "30"))
-        self.recFileNameLineEdit.setText(_translate("MainWindow", "~/record.txt"))
+        self.recFileNameLineEdit.setText(_translate("MainWindow", "~/record.csv"))
         self.exportPushButton.setText(_translate("MainWindow", "Export"))
         self.recSizeLineEdit.setText(_translate("MainWindow", "0"))
         self.posCheckBox.setText(_translate("MainWindow", "Position"))

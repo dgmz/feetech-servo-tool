@@ -1,10 +1,9 @@
-import sys
+import os
 from PyQt6 import QtWidgets, QtCore, QtGui
 from PyQt6.QtWidgets import QMainWindow
 from PyQt6.QtGui import QIntValidator, QRegularExpressionValidator
 from ui_mainwindow import Ui_MainWindow
 import serial.tools.list_ports
-import scservo_sdk
 import servo
 from servobus import ServoBus
 
@@ -476,7 +475,8 @@ class MainWindow(QMainWindow):
 				self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 		else:
 			self.auto_debug_timer.stop()
-	
+
+
 	def onExportButtonClicked(self):
 		if not self.isServoValidNow():
 			return
@@ -484,34 +484,34 @@ class MainWindow(QMainWindow):
 		if self.is_recording_:
 			self.is_recording_ = False
 			self.ui.exportPushButton.setText("Export")
-			self.ui.clearPushButton.setNabled(True)
+			self.ui.clearPushButton.setEnabled(True)
 
 			if self.record_section_data_:
 				# FIXME: handle exceptions
 				with open(self.record_file_name_, "a") as file:
 					file.write(self.record_section_data_)
-			self.ui.recSizeLineEdit.setText(self.record_data_count_)
+			self.ui.recSizeLineEdit.setText(str(self.record_data_count_))
 		else:
 			self.is_recording_ = True
 			self.ui.exportPushButton.setText("Stop")
 			self.ui.clearPushButton.setEnabled(False)
 			self.record_section_data_ = ""
 			self.record_data_count_ = 0
-			rec_time = int_or_default(self.ui.recTimeLineEdit().text(), 0)
-			self.file_write_interval_ = max(1, rec_time)
+			rec_interval = int_or_default(self.ui.recTimeLineEdit.text(), 1)
+			self.file_write_interval_ = max(1, rec_interval)
 			file_name = self.ui.recFileNameLineEdit.text()
 			self.record_file_name_ = os.path.expanduser(file_name)
 			#FIXME: handle exceptions
 			with open(self.record_file_name_, "w") as file:
-				#FIXME: column headers should be
-				# "No,Pos,Goal,Torque,Speed,Current,Temp,Voltage"
-				file.write("No,Pos,Gol,Ft,V,C,T,Vol\n")
-		
+				file.write('"No","Pos","Goal","Torque","Speed","Current","Temp","Voltage"\n')
+
+
 	def onClearButtonClicked(self):
 		self.record_data_count_ = 0
 		self.record_section_data_ = ""
 		self.ui.recSizeLineEdit.setText(self.record_data_count_)
-	
+
+
 	def onDataAnalysisTimerTimeout(self):
 		if not self.isServoValidNow():
 			return
@@ -519,7 +519,7 @@ class MainWindow(QMainWindow):
 		if not self.is_recording_:
 			return
 
-		self.record_data_count += 1
+		self.record_data_count_ += 1
 		line = ",".join([str(self.record_data_count_),
 			str(self.latest_pos_),
 			str(self.latest_goal_),
@@ -527,8 +527,7 @@ class MainWindow(QMainWindow):
 			str(self.latest_speed_),
 			str(self.latest_current_),
 			str(self.latest_temp_),
-			str(self.latest_voltage_),
-			"END"])
+			str(self.latest_voltage_)])
 		self.record_section_data_ += line + "\n"
 		section_size = 20 * self.file_write_interval_ # FIXME: magic number
 
@@ -538,7 +537,8 @@ class MainWindow(QMainWindow):
 				file.write(self.record_section_data_)
 			self.record_section_data_ = ""
 			self.ui.recSizeLineEdit.setText(str(self.record_data_count_))
-		
+
+
 	def onProgTimerTimeout(self):
 		if self.ui.tabWidget.currentIndex() != 1:
 			return
