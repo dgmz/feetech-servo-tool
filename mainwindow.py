@@ -526,7 +526,7 @@ class MainWindow(QMainWindow):
 			self.ui.clearPushButton.setEnabled(False)
 			self.record_section_data_ = ""
 			self.record_data_count_ = 0
-			rec_interval = int_or_default(self.ui.recTimeLineEdit.text(), 1)
+			rec_interval = int_or_default(self.ui.recTimeLineEdit.text(), 10)
 			self.file_write_interval_ = max(1, rec_interval)
 			file_name = self.ui.recFileNameLineEdit.text()
 			self.record_file_name_ = os.path.expanduser(file_name)

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>928</width>
-    <height>720</height>
+    <width>937</width>
+    <height>706</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -24,6 +24,9 @@
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
+  </property>
+  <property name="unifiedTitleAndToolBarOnMac">
+   <bool>false</bool>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QGroupBox" name="ComSeetingsGroup">
@@ -150,7 +153,7 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>180</x>
+      <x>190</x>
       <y>10</y>
       <width>741</width>
       <height>671</height>
@@ -183,7 +186,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>370</y>
+        <y>365</y>
         <width>411</width>
         <height>161</height>
        </rect>
@@ -375,7 +378,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>540</y>
+        <y>530</y>
         <width>411</width>
         <height>101</height>
        </rect>
@@ -507,7 +510,7 @@
       <property name="geometry">
        <rect>
         <x>430</x>
-        <y>370</y>
+        <y>365</y>
         <width>301</width>
         <height>161</height>
        </rect>
@@ -703,7 +706,7 @@
       <property name="geometry">
        <rect>
         <x>430</x>
-        <y>540</y>
+        <y>530</y>
         <width>301</width>
         <height>101</height>
        </rect>
@@ -1192,7 +1195,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>928</width>
+     <width>937</width>
      <height>24</height>
     </rect>
    </property>
