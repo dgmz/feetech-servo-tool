@@ -43,15 +43,15 @@ class MainWindow(QMainWindow):
 
 		self.setupComSettings()
 		self.setupServoList()
-		
 		self.setupServoControl()
 		self.setupAutoDebug()
 		self.setupDataAnalysis()
-		
 		self.setupProgramming()
 		
 		self.setIntRangeLineEdit(self.ui.upLimitLineEdit, 0, 1_200)
 		self.setIntRangeLineEdit(self.ui.downLimitLineEdit, 0, 1_200)
+
+		self.ui.actionAbout.triggered.connect(self.onAbout)
 
 		self.mode_ = "WRITE"
 		self.id_list_ = []
@@ -76,6 +76,13 @@ class MainWindow(QMainWindow):
 		self.latest_temp_ = 0
 		self.latest_voltage_ = 0
 		self.latest_move_ = 0
+
+
+	def onAbout(self):
+		dlg = QtWidgets.QMessageBox(self)
+		dlg.setWindowTitle("About")
+		dlg.setText("Verion 0.1.0")
+		dlg.exec()
 
 
 	def isServoValidNow(self):
