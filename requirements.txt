@@ -1,3 +1,4 @@
 PyQt6
 pyserial
 ftservo-python-sdk
+pyinstaller
