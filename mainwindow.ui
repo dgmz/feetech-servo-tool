@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>917</width>
-    <height>706</height>
+    <width>928</width>
+    <height>720</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -31,7 +31,7 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>151</width>
+      <width>171</width>
       <height>191</height>
      </rect>
     </property>
@@ -49,7 +49,7 @@
       <rect>
        <x>0</x>
        <y>20</y>
-       <width>151</width>
+       <width>170</width>
        <height>171</height>
       </rect>
      </property>
@@ -150,7 +150,7 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>170</x>
+      <x>180</x>
       <y>10</y>
       <width>741</width>
       <height>671</height>
@@ -185,7 +185,7 @@
         <x>10</x>
         <y>370</y>
         <width>411</width>
-        <height>151</height>
+        <height>161</height>
        </rect>
       </property>
       <property name="title">
@@ -197,7 +197,7 @@
          <x>0</x>
          <y>20</y>
          <width>411</width>
-         <height>131</height>
+         <height>141</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -375,7 +375,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>530</y>
+        <y>540</y>
         <width>411</width>
         <height>101</height>
        </rect>
@@ -509,7 +509,7 @@
         <x>430</x>
         <y>370</y>
         <width>301</width>
-        <height>151</height>
+        <height>161</height>
        </rect>
       </property>
       <property name="title">
@@ -521,7 +521,7 @@
          <x>0</x>
          <y>20</y>
          <width>301</width>
-         <height>131</height>
+         <height>141</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_3">
@@ -703,7 +703,7 @@
       <property name="geometry">
        <rect>
         <x>430</x>
-        <y>530</y>
+        <y>540</y>
         <width>301</width>
         <height>101</height>
        </rect>
@@ -1019,12 +1019,12 @@
         <x>19</x>
         <y>20</y>
         <width>361</width>
-        <height>25</height>
+        <height>32</height>
        </rect>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
-        <widget class="QPushButton" name="pushButton">
+        <widget class="QPushButton" name="SaveButton">
          <property name="enabled">
           <bool>false</bool>
          </property>
@@ -1034,7 +1034,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_2">
+        <widget class="QPushButton" name="LoadButton">
          <property name="enabled">
           <bool>false</bool>
          </property>
@@ -1044,7 +1044,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_3">
+        <widget class="QPushButton" name="OnlineButton">
          <property name="enabled">
           <bool>false</bool>
          </property>
@@ -1054,7 +1054,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_4">
+        <widget class="QPushButton" name="RecoveryButton">
          <property name="enabled">
           <bool>false</bool>
          </property>
@@ -1069,9 +1069,9 @@
       <property name="geometry">
        <rect>
         <x>520</x>
-        <y>580</y>
+        <y>572</y>
         <width>201</width>
-        <height>25</height>
+        <height>41</height>
        </rect>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -1098,7 +1098,7 @@
      <rect>
       <x>10</x>
       <y>210</y>
-      <width>151</width>
+      <width>171</width>
       <height>471</height>
      </rect>
     </property>
@@ -1110,7 +1110,7 @@
       <rect>
        <x>0</x>
        <y>20</y>
-       <width>151</width>
+       <width>171</width>
        <height>451</height>
       </rect>
      </property>
@@ -1192,12 +1192,24 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>917</width>
-     <height>23</height>
+     <width>928</width>
+     <height>24</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
+   <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About...</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
