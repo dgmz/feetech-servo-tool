@@ -36,7 +36,7 @@ For MacOS:
 git pull https://github.com/dgmz/feetech-servo-tool.git
 cd feetech-servo-tool
 python -m venv venv
-source venv\bin\activate
+source venv/bin/activate
 pip install -r requirements.txt
 sh build-mac.sh
 ```
@@ -46,7 +46,7 @@ For Linux:
 git pull https://github.com/dgmz/feetech-servo-tool.git
 cd feetech-servo-tool
 python -m venv venv
-source venv\bin\activate
+source venv/bin/activate
 pip install -r requirements.txt
 sh build-linux.sh
 ```
