@@ -16,3 +16,39 @@ The current release is v0.1.0, which you can download as a binary for MacOS (Int
 Windows and Debian/Ubuntu [here](https://github.com/dgmz/feetech-servo-tool/releases/tag/v0.1.0). Other Debian based distros may work too. If it doesn't
 try with the source code. Sorry for Apple hardware Macs, but I don't own one, so
 no binary for now.
+
+# Build instructions
+
+For Windows:
+
+```CMD
+git pull https://github.com/dgmz/feetech-servo-tool.git
+cd feetech-servo-tool
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+build-win
+```
+
+For MacOS:
+
+```sh
+git pull https://github.com/dgmz/feetech-servo-tool.git
+cd feetech-servo-tool
+python -m venv venv
+source venv\bin\activate
+pip install -r requirements.txt
+sh build-mac.sh
+```
+
+For Linux:
+```sh
+git pull https://github.com/dgmz/feetech-servo-tool.git
+cd feetech-servo-tool
+python -m venv venv
+source venv\bin\activate
+pip install -r requirements.txt
+sh build-linux.sh
+```
+
+A directory named `dist` will be created with the binary.
