@@ -11,6 +11,8 @@ I32_MAX = 2 ** 31 - 1
 I16_MIN = -(2 ** 15)
 I16_MAX = 2 ** 15 - 1
 
+APP_DIR = os.path.abspath(os.path.dirname(__file__))
+
 def int_or_default(v,default_v):
 	try:
 		return int(v)
@@ -27,7 +29,7 @@ class MainWindow(QMainWindow):
 		self.ui.ParityComboBox.setEnabled(False)
 		self.ui.ParityLabel.setEnabled(False)
 		self.setWindowTitle("Feetech Servo Tool")
-		self.setWindowIcon(QtGui.QIcon("icons/feetech-tool.png"))
+		self.setWindowIcon(QtGui.QIcon(os.path.join(APP_DIR, "icons", "feetech-tool.png")))
 		
 		self.select_servo_ = servo.Servo(None)
 
