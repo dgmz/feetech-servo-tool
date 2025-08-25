@@ -1,8 +1,14 @@
-# feetech-servo-tool
+# Project summary
 
 Python port of FT_SCServo_Debug_Qt, with the goal of being cross-platform.
 
-# status of development
+It all started because I wanted to build a SO-101 robotic arm, from the 
+[LeRobot project](https://github.com/huggingface/lerobot). This arm uses 
+Feetech ST3215 servos, but the official configuration tool only runs on 
+Windows, and I'm a Mac user. So I took the C++ source code from FT_SCServo_Debug_Qt
+and ported it to Python. 
+
+# Status of Development
 
 The tool is actually only compatible with Feetech ST series (and possibly SC)
 which is what I have to test.
@@ -17,7 +23,7 @@ Windows and Debian/Ubuntu [here](https://github.com/dgmz/feetech-servo-tool/rele
 try with the source code. Sorry for Apple hardware Macs, but I don't own one, so
 no binary for now.
 
-# Build instructions
+# Build Instructions
 
 For Windows:
 
