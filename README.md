@@ -1,3 +1,5 @@
+![Feetech Servo Tool](icons/servo-tool.iconset/icon_256.png)
+
 # Project summary
 
 Python port of FT_SCServo_Debug_Qt, with the goal of being cross-platform.
