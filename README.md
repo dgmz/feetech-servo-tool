@@ -13,6 +13,19 @@ quite frustating. So I decided to take the C++ source code from
 FT_SCServo_Debug_Qt and ported it to Python. Now I can work with any of my 
 computers with the exact same tool.
 
+# Screenshots
+
+Here are a few screenshots of the MacOS version.
+
+This is the Debug (main) tab.
+
+![Debug Screen](doc/debug-screen.png)
+
+And this is the programming (configuration) tab.
+
+![Programming Screen](doc/programming-screen.png)
+
+
 # Status of Development
 
 The tool is actually only compatible with Feetech ST series (and possibly SC)
