@@ -7,8 +7,11 @@ Python port of FT_SCServo_Debug_Qt, with the goal of being cross-platform.
 It all started because I wanted to build a SO-101 robotic arm, from the 
 [LeRobot project](https://github.com/huggingface/lerobot). This arm uses 
 Feetech ST3215 servos, but the official configuration tool only runs on 
-Windows, and I'm a Mac user. So I took the C++ source code from FT_SCServo_Debug_Qt
-and ported it to Python. 
+Windows, while FT_SCServo_Debug_Qt, the most complete Open Source one, is 
+only available for Linux. I'm mostly a Mac user, and found the situation 
+quite frustating. So I decided to take the C++ source code from 
+FT_SCServo_Debug_Qt and ported it to Python. Now I can work with any of my 
+computers with the exact same tool.
 
 # Status of Development
 
