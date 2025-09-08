@@ -3,8 +3,8 @@ Type=Application
 Name=Feetech Servo Tool
 GenericName=Feetech Tool
 Comment=Configure and Test servos from Feetech using the Serial Servo Bus interface
-Exec=servo-tool
-Icon=icons/feetech-tool.png
+Exec=Servo-Tool
+Icon=Servo-Tool
 Terminal=false
-Categories=Application
+Categories=Utility
 
