@@ -37,9 +37,11 @@ from file.
 And the code is still pretty "unpolished". A lot of clean up is needed.
 
 The current release is v0.1.0, which you can download as a binary for MacOS (Intel), 
-Windows and Debian/Ubuntu [here](https://github.com/dgmz/feetech-servo-tool/releases/tag/v0.1.0). Other Debian based distros may work too. If it doesn't
-try with the source code. Sorry for Apple hardware Macs, but I don't own one, so
-no binary for now.
+Windows and Linux [here](https://github.com/dgmz/feetech-servo-tool/releases/tag/v0.1.0).
+I have used the AppImage format to try to support several Linux distros. Because it was
+built on Ubuntu 24.10 it may have problems in older systems. Alternatively you can try 
+with the source code. Sorry for Apple hardware Macs, but I don't own one, so no binary 
+for now.
 
 # Build Instructions
 
