@@ -4,14 +4,7 @@
 
 Python port of FT_SCServo_Debug_Qt, with the goal of being cross-platform.
 
-It all started because I wanted to build a SO-101 robotic arm, from the 
-[LeRobot project](https://github.com/huggingface/lerobot). This arm uses 
-Feetech ST3215 servos, but the official configuration tool only runs on 
-Windows, while FT_SCServo_Debug_Qt, the most complete Open Source one, is 
-only available for Linux. I'm mostly a Mac user, and found the situation 
-quite frustating. So I decided to take the C++ source code from 
-FT_SCServo_Debug_Qt and ported it to Python. Now I can work with any of my 
-computers with the exact same tool.
+It all started because I wanted to build a SO-101 robotic arm, from the [LeRobot project](https://github.com/huggingface/lerobot). This arm uses Feetech ST3215 servos, but the official configuration tool only runs on Windows, while FT_SCServo_Debug_Qt, the most complete Open Source one, is only available for Linux. I'm mostly a Mac user, and found the situation quite frustating. So I decided to take the C++ source code from FT_SCServo_Debug_Qt and ported it to Python. Now I can work with any of my computers with the exact same tool.
 
 # Screenshots
 
@@ -36,19 +29,15 @@ from file.
 
 And the code is still pretty "unpolished". A lot of clean up is needed.
 
-The current release is v0.1.0, which you can download as a binary for MacOS (Intel), 
-Windows and Linux [here](https://github.com/dgmz/feetech-servo-tool/releases/tag/v0.1.0).
-I have used the AppImage format to try to support several Linux distros. Because it was
-built on Ubuntu 24.10 it may have problems in older systems. Alternatively you can try 
-with the source code. Sorry for Apple hardware Macs, but I don't own one, so no binary 
-for now.
+The current release is v0.1.0, which you can download as a binary for MacOS (Intel), Windows and Linux [here](https://github.com/dgmz/feetech-servo-tool/releases/tag/v0.1.0).
+I have used the AppImage format to try to support several Linux distros. Because it was built on Ubuntu 24.10 it may have problems in older systems. Alternatively you can try with the source code. Sorry for Apple hardware Macs, but I don't own one, so no binary for now.
 
 # Build Instructions
 
 For Windows:
 
 ```CMD
-git pull https://github.com/dgmz/feetech-servo-tool.git
+git clone https://github.com/dgmz/feetech-servo-tool.git
 cd feetech-servo-tool
 python -m venv venv
 venv\Scripts\activate
@@ -59,7 +48,7 @@ build-win
 For MacOS:
 
 ```sh
-git pull https://github.com/dgmz/feetech-servo-tool.git
+git clone https://github.com/dgmz/feetech-servo-tool.git
 cd feetech-servo-tool
 python -m venv venv
 source venv/bin/activate
@@ -69,7 +58,7 @@ sh build-mac.sh
 
 For Linux:
 ```sh
-git pull https://github.com/dgmz/feetech-servo-tool.git
+git clone https://github.com/dgmz/feetech-servo-tool.git
 cd feetech-servo-tool
 python -m venv venv
 source venv/bin/activate
