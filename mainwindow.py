@@ -26,6 +26,13 @@ class MainWindow(QMainWindow):
 		# window
 		self.ui = Ui_MainWindow()
 		self.ui.setupUi(self)
+		# Pin Servo Feedback value column widths to the rendered width of
+		# the widest plausible reading (signed 16-bit "-32768" also covers
+		# voltage's "99.9V" formatting). Without this, column widths track
+		# the current text and reflow on every update.
+		value_col_w = self.ui.voltageLabel.fontMetrics().horizontalAdvance("-32768")
+		self.ui.gridLayout_3.setColumnMinimumWidth(1, value_col_w)
+		self.ui.gridLayout_3.setColumnMinimumWidth(3, value_col_w)
 		self.ui.ParityComboBox.setEnabled(False)
 		self.ui.ParityLabel.setEnabled(False)
 		self.setWindowTitle("Feetech Servo Tool")
