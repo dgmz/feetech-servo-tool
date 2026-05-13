@@ -53,7 +53,7 @@ cd feetech-servo-tool
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-sh build-mac.sh
+./build-mac.sh
 ```
 
 For Linux:
@@ -63,7 +63,7 @@ cd feetech-servo-tool
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-sh build-linux.sh
+./build-linux.sh
 ```
 
 A directory named `dist` will be created with the binary.

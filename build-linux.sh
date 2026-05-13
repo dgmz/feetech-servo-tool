@@ -1,3 +1,5 @@
+#!/bin/sh
+
 pyinstaller --name 'Servo-Tool' --icon 'icons/feetech-tool.png' --add-data icons/feetech-tool.png:icons/ --windowed --onefile main.py
 mkdir -p dist/Servo-Tool.AppDir/usr/bin
 cp -f dist/Servo-Tool dist/Servo-Tool.AppDir/usr/bin
