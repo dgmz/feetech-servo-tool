@@ -360,7 +360,12 @@ class Servo:
 	
 
 	def read_current(self, id):
-		return self.bus_.read_word(id, 60) or 0
+		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
+		val, res, error = handler.read2ByteTxRx(id, 69)
+		if 0 == res:
+			return handler.scs_tohost(val, 10)
+		return 0
+		#return self.bus_.read_word(id, 69) or 0
 	
 
 	def read_temperature(self, id):

@@ -652,7 +652,7 @@ class MainWindow(QMainWindow):
 		self.ui.positionLabel.setText(str(self.latest_pos_))
 		self.ui.torqueLabel.setText(str(self.latest_torque_))
 		self.ui.speedLabel.setText(str(self.latest_speed_))
-		self.ui.currentLabel.setText(str(self.latest_current_))
+		self.ui.currentLabel.setText("%6.1fmA" % (self.latest_current_ * 6.5))
 		self.ui.temperatureLabel.setText(str(self.latest_temp_))
 		self.ui.voltageLabel.setText("%.1fV" % (self.latest_voltage_ * 0.1))
 		self.ui.movingLabel.setText(str(self.latest_move_))
