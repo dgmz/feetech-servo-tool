@@ -169,6 +169,9 @@ class MainWindow(QMainWindow):
 		self.ui.memoryTableView.setModel(self.prog_mem_model_)
 		self.clearProgMemTable()
 		
+		self.ui.SaveButton.clicked.connect(self.onSaveButtonClicked)
+		self.ui.LoadButton.clicked.connect(self.onLoadButtonClicked)
+
 		self.ui.memoryTableView.selectionModel().selectionChanged.connect(self.onMemoryTableSelection)
 		self.ui.memSetButton.clicked.connect(self.onMemSetButtonClicked)
 		
@@ -710,3 +713,9 @@ class MainWindow(QMainWindow):
 						self.latest_voltage_)
 
 		self.count_ = (self.count_ + 1) % 3
+
+	def onSaveButtonClicked(self):
+		pass
+
+	def onLoadButtonClicked(self):
+		pass
