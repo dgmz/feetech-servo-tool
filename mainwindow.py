@@ -50,19 +50,28 @@ class MainWindow(QMainWindow):
 		self.sms_sts_proto_ = servo.Servo(self.servo_bus_)
 		self.scs_proto_ = servo.Servo(self.servo_bus_)
 
+		# Initialise mode-tracking state before setup* so any setup method
+		# (or signal handler fired during setup) can read these without
+		# AttributeError. work_mode_ uses the same int values as the
+		# servo's Work Mode register (servo.WORK_MODE_*) so comparisons
+		# against read_work_mode() return values are direct.
+		self.mode_ = "WRITE"
+		self.work_mode_ = servo.WORK_MODE_POSITION
+		self.is_syncing_work_mode_ = False
+
 		self.setupComSettings()
 		self.setupServoList()
 		self.setupServoControl()
+		self.setupWorkMode()
 		self.setupAutoDebug()
 		self.setupDataAnalysis()
 		self.setupProgramming()
-		
+
 		self.setIntRangeLineEdit(self.ui.upLimitLineEdit, 0, 1_200)
 		self.setIntRangeLineEdit(self.ui.downLimitLineEdit, 0, 1_200)
 
 		self.ui.actionAbout.triggered.connect(self.onAbout)
 
-		self.mode_ = "WRITE"
 		self.id_list_ = []
 		self.is_searching_ = False
 		self.sweep_running_ = False
@@ -145,6 +154,177 @@ class MainWindow(QMainWindow):
 		self.ui.setPushButton.clicked.connect(self.onSetButtonClicked)
 		self.ui.torqueEnableCheckBox.stateChanged.connect(self.onTorqueEnableCheckBoxStateChanged)
 		self.ui.actionPushButton.clicked.connect(self.onActionButtonClicked)
+
+
+	def setupWorkMode(self):
+		# A third mode (multi-turn extended position) could slot in here as a
+		# QRadioButton wired to the same toggle handler; reconfigureForWorkMode
+		# would gain a branch that widens the slider but keeps the position path.
+		# The Position/Wheel button group is declared in mainwindow.ui as
+		# workModeButtonGroup so it stays separate from the Write/Sync/Reg
+		# group (otherwise all radios sharing groupBox_3 would auto-exclude).
+		self.ui.positionModeRadioButton.toggled.connect(self.onWorkModeRadioButtonsToggled)
+		self.ui.wheelModeRadioButton.toggled.connect(self.onWorkModeRadioButtonsToggled)
+		self.ui.positionModeRadioButton.setEnabled(False)
+		self.ui.wheelModeRadioButton.setEnabled(False)
+
+
+	def onWorkModeRadioButtonsToggled(self, checked):
+		if not checked:
+			return
+		if self.is_syncing_work_mode_:
+			return
+		if not self.isServoValidNow():
+			return
+		if not self.isWorkModeSupportedSeries():
+			return
+		series = self.select_servo_.model_
+		if self.ui.wheelModeRadioButton.isChecked():
+			if self.sms_sts_proto_.set_wheel_mode(self.select_servo_.id_, series):
+				# Position-mode writes leave a non-zero Goal Velocity (reg 46)
+				# in SRAM; without this the motor would lurch off at that
+				# velocity the moment wheel mode takes effect.
+				self.sms_sts_proto_.write_velocity(self.select_servo_.id_, 0, 0)
+				self.work_mode_ = servo.WORK_MODE_WHEEL
+				self.reconfigureForWorkMode()
+			else:
+				# Transition failed mid-flight; re-read the servo to reconcile
+				# the radio state with reality.
+				self.syncWorkModeFromServo()
+		elif self.ui.positionModeRadioButton.isChecked():
+			# Stop the motor before tearing down wheel mode to avoid a lurch
+			# when limits get restored.
+			if self.work_mode_ == servo.WORK_MODE_WHEEL:
+				self.sms_sts_proto_.write_velocity(self.select_servo_.id_, 0, 0)
+			if self.sms_sts_proto_.exit_wheel_mode(self.select_servo_.id_, series):
+				self.work_mode_ = servo.WORK_MODE_POSITION
+				self.reconfigureForWorkMode()
+			else:
+				self.syncWorkModeFromServo()
+
+
+	def isWorkModeSupportedSeries(self):
+		return self.select_servo_.model_ in servo.WHEEL_MODE_SUPPORTED_SERIES
+
+
+	def reconfigureForWorkMode(self):
+		# Update slider/label/validator to reflect work_mode_. Slider signals
+		# are blocked so resetting its value doesn't fire a stray write.
+		# Always re-enables the slider and Set button: syncWorkModeFromServo
+		# disables them when it finds an unsupported mode (PWM/Step), and
+		# this method is the recovery path after the user escapes back to
+		# Position or Wheel.
+		self.ui.goalSlider.blockSignals(True)
+		try:
+			# Clear any "Mode: PWM/Step (unsupported)" label left over from
+			# the previous sync — we're now in a supported mode.
+			self.ui.workModeStatusLabel.setText("")
+			self.ui.goalSlider.setEnabled(True)
+			self.ui.setPushButton.setEnabled(True)
+			if self.work_mode_ == servo.WORK_MODE_WHEEL:
+				vel_max = servo.velocity_max_for_series(self.select_servo_.model_)
+				self.ui.goalSlider.setMinimum(-vel_max)
+				self.ui.goalSlider.setMaximum(vel_max)
+				self.ui.goalSlider.setValue(0)
+				self.ui.goalLineEdit.setValidator(QIntValidator(-vel_max, vel_max, self))
+				self.ui.goalLineEdit.setText("0")
+				self.ui.label_13.setText("Velocity")
+				self.ui.label_36.setText("Goal velocity:")
+				# Sync/Reg write protocols aren't wired for velocity in this
+				# round, so force the write radio and grey out the others.
+				# The setChecked fires onModeRadioButtonsToggled, which sets
+				# self.mode_ and disables the Action button — no need to
+				# duplicate either of those side-effects here.
+				self.ui.syncWriteRadioButton.setEnabled(False)
+				self.ui.regWriteRadioButton.setEnabled(False)
+				self.ui.writeRadioButton.setChecked(True)
+				# In wheel mode the slider's "Velocity" IS the value written
+				# to reg 46 (Goal Velocity) — the same register that "Speed"
+				# would have written in position mode. So Speed is redundant
+				# here, and Time only applies to position-mode timed moves.
+				# Grey both out so the user doesn't enter values that go
+				# nowhere.
+				self.ui.speedLineEdit.setEnabled(False)
+				self.ui.timeLineEdit.setEnabled(False)
+			else:
+				pos_max = servo.position_max_for_series(self.select_servo_.model_)
+				self.ui.goalSlider.setMinimum(servo.POSITION_MIN)
+				self.ui.goalSlider.setMaximum(pos_max)
+				# Reset to 0 (rather than carrying over the previous slider
+				# value, or leaving the UI default 2047) so that clicking
+				# Set immediately after a mode change doesn't fire off a
+				# stale or wheel-velocity value as a position command.
+				self.ui.goalSlider.setValue(0)
+				self.ui.goalLineEdit.setValidator(QIntValidator(I16_MIN, I16_MAX, self))
+				self.ui.goalLineEdit.setText("0")
+				self.ui.label_13.setText("Goal")
+				self.ui.label_36.setText("Goal:")
+				self.ui.syncWriteRadioButton.setEnabled(True)
+				self.ui.regWriteRadioButton.setEnabled(True)
+				self.ui.speedLineEdit.setEnabled(True)
+				self.ui.timeLineEdit.setEnabled(True)
+		finally:
+			self.ui.goalSlider.blockSignals(False)
+
+
+	def syncWorkModeFromServo(self):
+		# Called after a servo is selected (or its series changes). Reads
+		# register 33 and aligns the UI with the servo's persisted mode.
+		# For unsupported series (no Work Mode register), locks the UI into
+		# position-mode controls and disables the radios.
+		# The is_syncing_work_mode_ flag suppresses onWorkModeRadioButtonsToggled
+		# while we programmatically call setChecked() below — otherwise each
+		# setChecked would fire the handler and trigger a redundant
+		# set_wheel_mode / exit_wheel_mode write.
+		self.is_syncing_work_mode_ = True
+		try:
+			self.ui.workModeStatusLabel.setText("")
+			if not self.isWorkModeSupportedSeries() or not self.isServoValidNow():
+				self.ui.positionModeRadioButton.setEnabled(False)
+				self.ui.wheelModeRadioButton.setEnabled(False)
+				self.ui.positionModeRadioButton.setChecked(True)
+				self.work_mode_ = servo.WORK_MODE_POSITION
+				self.reconfigureForWorkMode()
+				return
+
+			work_mode = self.sms_sts_proto_.read_work_mode(self.select_servo_.id_, self.select_servo_.model_)
+			self.ui.positionModeRadioButton.setEnabled(True)
+			self.ui.wheelModeRadioButton.setEnabled(True)
+			if work_mode == servo.WORK_MODE_POSITION:
+				self.ui.positionModeRadioButton.setChecked(True)
+				self.work_mode_ = servo.WORK_MODE_POSITION
+				self.reconfigureForWorkMode()
+			elif work_mode == servo.WORK_MODE_WHEEL:
+				self.ui.wheelModeRadioButton.setChecked(True)
+				self.work_mode_ = servo.WORK_MODE_WHEEL
+				self.reconfigureForWorkMode()
+			else:
+				# PWM, Step, or read failure / None. Reset work_mode_ and
+				# labels to the position-mode style so the feedback readout
+				# stops calling read_goal_velocity / showing "Goal velocity:"
+				# for a servo that isn't actually in wheel mode. Then disable
+				# the slider/Set button since neither write path applies, and
+				# present both radios as unchecked so the UI reflects the
+				# servo's unsupported state.
+				self.work_mode_ = servo.WORK_MODE_POSITION
+				self.reconfigureForWorkMode()
+				self.ui.goalSlider.setEnabled(False)
+				self.ui.setPushButton.setEnabled(False)
+				# QButtonGroup is normally exclusive (always exactly one
+				# checked); drop exclusivity briefly to allow the "all off"
+				# state.
+				self.ui.workModeButtonGroup.setExclusive(False)
+				self.ui.positionModeRadioButton.setChecked(False)
+				self.ui.wheelModeRadioButton.setChecked(False)
+				self.ui.workModeButtonGroup.setExclusive(True)
+				if work_mode == servo.WORK_MODE_PWM:
+					self.ui.workModeStatusLabel.setText("Mode: PWM (unsupported)")
+				elif work_mode == servo.WORK_MODE_STEP:
+					self.ui.workModeStatusLabel.setText("Mode: Step (unsupported)")
+				else:
+					self.ui.workModeStatusLabel.setText("Mode: unknown")
+		finally:
+			self.is_syncing_work_mode_ = False
 
 
 	def setupAutoDebug(self):
@@ -304,6 +484,11 @@ class MainWindow(QMainWindow):
 			self.ui.ComOpenButton.setText("Open")
 			self.setEnableComSettings(True)
 			self.select_servo_.id_ = -1
+			# isServoValidNow() is now False; this routes through the early
+			# return that disables the Position/Wheel radios and snaps the
+			# UI back to position-mode controls, so the radios don't lie
+			# about a disconnected servo's state.
+			self.syncWorkModeFromServo()
 		else:
 			if not self.servo_bus_.open(self.ui.ComComboBox.currentText()):
 				print("Failed to open port")
@@ -367,6 +552,7 @@ class MainWindow(QMainWindow):
 		self.select_servo_.id_ = int_or_default(self.servo_list_model_.data(index), None)
 		index = self.servo_list_model_.index(row, 1)
 		self.selectServorSeries(servo.getModelSeries(str(self.servo_list_model_.data(index))))
+		self.syncWorkModeFromServo()
 	
 
 	def onGoalSliderValueChanged(self):
@@ -374,6 +560,11 @@ class MainWindow(QMainWindow):
 		self.ui.goalLineEdit.setText(str(goal))
 
 		if not self.isServoValidNow():
+			return
+
+		if self.work_mode_ == servo.WORK_MODE_WHEEL:
+			acc = int_or_default(self.ui.accLineEdit.text(), 0)
+			self.sms_sts_proto_.write_velocity(self.select_servo_.id_, goal, acc)
 			return
 
 		if self.mode_ == "REG_WRITE":
@@ -393,6 +584,10 @@ class MainWindow(QMainWindow):
 
 		if not self.isServoValidNow():
 			print("servo not valid")
+			return
+
+		if self.work_mode_ == servo.WORK_MODE_WHEEL:
+			self.sms_sts_proto_.write_velocity(self.select_servo_.id_, goal, acc)
 			return
 
 		if self.mode_ == "REG_WRITE":
@@ -451,7 +646,15 @@ class MainWindow(QMainWindow):
 			if self.select_servo_.model_ == "SCS":
 				self.scs_proto_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			else:
-				self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
+				self.sms_sts_proto_.set_position_mode(self.select_servo_.id_, self.select_servo_.model_)
+				# Always re-sync the UI: set_position_mode just wrote
+				# Work Mode = 0, but the UI may still show wheel-mode
+				# controls (from work_mode_ == WHEEL) or unsupported-mode
+				# state (status label set, slider disabled). Both cases
+				# need the sync; work_mode_ alone can't distinguish them
+				# because the unsupported branch also leaves work_mode_
+				# at POSITION.
+				self.syncWorkModeFromServo()
 				self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			self.auto_debug_timer_.start(int_or_default(self.ui.sweepLineEdit.text(), 0))
 
@@ -474,7 +677,8 @@ class MainWindow(QMainWindow):
 			if self.select_servo_.model_ == "SCS":
 				self.scs_proto_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			else:
-				self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
+				self.sms_sts_proto_.set_position_mode(self.select_servo_.id_, self.select_servo_.model_)
+				self.syncWorkModeFromServo()
 				self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			self.auto_debug_timer_.start(int_or_default(self.ui.stepDelayLineEdit.text(), 0))
 
@@ -500,7 +704,7 @@ class MainWindow(QMainWindow):
 			if self.select_servo_.model_ == "SCS":
 				self.scs_proto_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			else:
-				self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
+				self.sms_sts_proto_.set_position_mode(self.select_servo_.id_, self.select_servo_.model_)
 				self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 		elif self.step_running_:
 			start = int_or_default(self.ui.startLineEdit.text(), 0)
@@ -519,7 +723,7 @@ class MainWindow(QMainWindow):
 			if self.select_servo_.model_ == "SCS":
 				self.scs_proto_.write_pos(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 			else:
-				self.sms_sts_proto_.rotation_mode(self.select_servo_.id_)
+				self.sms_sts_proto_.set_position_mode(self.select_servo_.id_, self.select_servo_.model_)
 				self.sms_sts_proto_.write_pos_ex(self.select_servo_.id_, self.latest_auto_debug_goal_, 0, 0)
 		else:
 			self.auto_debug_timer.stop()
@@ -648,6 +852,16 @@ class MainWindow(QMainWindow):
 			else:
 				self.servo_bus_.write_byte(self.select_servo_.id_, item.address, val)
 		self.is_mem_writing_ = False
+		# Writes to Work Mode or the Min/Max Position Limits change the
+		# servo's mode interpretation, so the Servo Control tab needs to
+		# re-read and re-render. Without this, manually changing those
+		# registers in the memory table only takes effect on app restart.
+		if self.isWorkModeSupportedSeries() and item.address in (
+			servo.REG_MIN_POSITION_LIMIT,
+			servo.REG_MAX_POSITION_LIMIT,
+			servo.reg_work_mode_for_series(self.select_servo_.model_),
+		):
+			self.syncWorkModeFromServo()
 
 
 	def onGraphTimerTimeout(self):
@@ -711,7 +925,10 @@ class MainWindow(QMainWindow):
 				elif self.count_ == 2:
 					self.latest_voltage_ = self.sms_sts_proto_.read_voltage(self.select_servo_.id_)
 					self.latest_move_ = self.sms_sts_proto_.read_move(self.select_servo_.id_)
-					self.latest_goal_ = self.sms_sts_proto_.read_goal(self.select_servo_.id_)
+					if self.work_mode_ == servo.WORK_MODE_WHEEL:
+						self.latest_goal_ = self.sms_sts_proto_.read_goal_velocity(self.select_servo_.id_)
+					else:
+						self.latest_goal_ = self.sms_sts_proto_.read_goal(self.select_servo_.id_)
 					self.ui.graphWidget.append_data(self.latest_pos_,
 						self.latest_torque_,
 						self.latest_speed_,
