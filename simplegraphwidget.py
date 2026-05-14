@@ -4,8 +4,7 @@ from collections import deque
 
 
 def mapping(val, in_min, in_max, out_min, out_max):
-	val_w = in_min + ((val - in_min) % (in_max - in_min + 1)) #wrap range
-	return out_min + (val_w - in_min) * (out_max - out_min) / (in_max - in_min)
+	return out_min + (val - in_min) * (out_max - out_min) / (in_max - in_min)
 
 
 class Series:
@@ -120,13 +119,14 @@ class SimpleGraphWidget(QWidget):
 						x0, y0 = x1, y1
 
 		for limit in [self.up_limit, self.down_limit]:
-			if limit:
-				pen.setColor(QtGui.QColor('plum'))
-				painter.setPen(pen)
-				y = mapping(limit, -1000, 1000, grid_y_max, grid_y_min)
-				painter.drawLine(0, int(y), int(w), int(y))
-				y = mapping(-limit, -1000, 1000, grid_y_max, grid_y_min)
-				painter.drawLine(0, int(y), int(w), int(y))
+			if not limit:
+				continue
+			pen.setColor(QtGui.QColor('plum'))
+			painter.setPen(pen)
+			for l in (limit, -limit):
+				if -1000 <= l <= 1000:
+					y = mapping(l, -1000, 1000, grid_y_max, grid_y_min)
+					painter.drawLine(0, int(y), int(w), int(y))
 
 
 if __name__ == "__main__":
