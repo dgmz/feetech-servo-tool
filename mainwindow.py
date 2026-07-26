@@ -106,6 +106,13 @@ class MainWindow(QMainWindow):
 		])
 		self.ui.ParityComboBox.addItems(["NONE", "ODD", "EVEN"])
 		self.setIntRangeLineEdit(self.ui.timeoutLineEdit, 0, 10_000)
+		settings = QtCore.QSettings()
+		saved_baud = settings.value("com/baudrate", type=str)
+		if saved_baud and self.ui.BaudComboBox.findText(saved_baud) >= 0:
+			self.ui.BaudComboBox.setCurrentText(saved_baud)
+		saved_timeout = settings.value("com/timeout", type=str)
+		if saved_timeout:
+			self.ui.timeoutLineEdit.setText(saved_timeout)
 		self.onPortSearchTimerTimeout() # fake event
 		self.ui.ComOpenButton.clicked.connect(self.onConnectButtonClicked)
 		self.port_search_timer_ = QtCore.QTimer(self)
@@ -292,6 +299,8 @@ class MainWindow(QMainWindow):
 			return
 
 		previous = self.ui.ComComboBox.currentText()
+		if not previous:
+			previous = QtCore.QSettings().value("com/port", "", type=str)
 		self.ui.ComComboBox.clear()
 		for info in serial.tools.list_ports.comports():
 			self.ui.ComComboBox.addItem(info.device)
@@ -312,6 +321,10 @@ class MainWindow(QMainWindow):
 				self.servo_bus_.set_timeout(int_or_default(self.ui.timeoutLineEdit.text(), 50))
 				self.ui.ComOpenButton.setText("Close")
 				self.setEnableComSettings(False)
+				settings = QtCore.QSettings()
+				settings.setValue("com/port", self.ui.ComComboBox.currentText())
+				settings.setValue("com/baudrate", self.ui.BaudComboBox.currentText())
+				settings.setValue("com/timeout", self.ui.timeoutLineEdit.text())
 	
 
 	def onSearchButtonClicked(self):
