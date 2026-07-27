@@ -2,6 +2,33 @@
 from collections import namedtuple
 import scservo_sdk
 
+# Register addresses for the wheel-mode and position-mode helpers.
+# Addresses listed here are stable across STS, SMBL, and SMCL (same
+# memory layout for the position / acc / time / velocity block).
+# Naming follows the Feetech docs / MemConfig ("position" / "velocity")
+# rather than the SDK's "angle" / "speed". The two registers that DO
+# differ between SMCL and STS/SMBL (Work Mode, Lock) are handled via
+# the per-series tables further down.
+REG_MIN_POSITION_LIMIT = scservo_sdk.SMS_STS_MIN_ANGLE_LIMIT_L
+REG_MAX_POSITION_LIMIT = scservo_sdk.SMS_STS_MAX_ANGLE_LIMIT_L
+REG_GOAL_POSITION = scservo_sdk.SMS_STS_GOAL_POSITION_L
+REG_GOAL_VELOCITY = scservo_sdk.SMS_STS_GOAL_SPEED_L
+
+# Work Mode register values. The SDK doesn't expose named constants
+# for these — its WheelMode() helper writes the literal 1. Series
+# support varies: SMBL caps at 2 (no Step mode); SCS lacks the
+# register entirely.
+WORK_MODE_POSITION = 0
+WORK_MODE_WHEEL = 1
+WORK_MODE_PWM = 2
+WORK_MODE_STEP = 3
+
+# Single-turn position range defaults. Min is 0 across all series;
+# max varies by series (see _POSITION_MAX_BY_SERIES further down).
+POSITION_MIN = 0
+DEFAULT_POSITION_MAX = 4095
+
+
 MemItem = namedtuple("MemItem", ["address", "name", "size", "default_value", "direction", "is_eprom", "is_readonly", "min", "max"])
 
 MemConfig = {
@@ -200,6 +227,56 @@ MemConfig = {
 }
 
 
+# Per-series capability tables, keyed by series string (matching the
+# values returned by getModelSeries below). These sit alongside
+# MemConfig as parallel per-series data: MemConfig is per-register,
+# these are per-series properties.
+
+# Work Mode register address. STS and SMBL share the SMS_STS layout
+# (reg 33); SMCL puts it at reg 35. The SMCL value is mirrored from
+# MemConfig["SMCL"] and unverified against an authoritative online
+# source — Feetech's FTServo_Arduino SMS_STS.h asserts reg 33 for
+# SMS+STS together but its scope re: SMCL (the 360M closed-loop
+# variants, model code 6 in ServoModels) is unclear. TODO: confirm
+# on SMCL hardware (e.g. SM30-360M).
+_REG_WORK_MODE_BY_SERIES = {
+	"STS": scservo_sdk.SMS_STS_MODE,   # 33
+	"SMBL": scservo_sdk.SMS_STS_MODE,  # 33
+	"SMCL": 35,                        # per MemConfig["SMCL"], not SDK
+}
+
+# Lock register address. Same STS/SMBL vs SMCL split.
+_REG_LOCK_BY_SERIES = {
+	"STS": scservo_sdk.SMS_STS_LOCK,   # 55
+	"SMBL": scservo_sdk.SMS_STS_LOCK,  # 55
+	"SMCL": 48,                        # per MemConfig["SMCL"], not SDK
+}
+
+# Single-turn position max per series. Sourced from datasheets — not
+# MemConfig (which tracks per-register validator ranges, not encoder
+# resolution). 12-bit encoders for STS/SMBL/SMCL, 10-bit for SCS.
+_POSITION_MAX_BY_SERIES = {
+	"STS": 4095,
+	"SMBL": 4095,
+	"SMCL": 4095,
+	"SCS": 1023,
+}
+
+# Goal Velocity (reg 46) max magnitude in wheel mode. Per the ST3215
+# register map (Waveshare wiki / python-st3215), reg 46 accepts up to
+# 3400 step/s on STS3215 with bit 15 as the direction bit
+# (sign-magnitude). SMBL's authoritative max isn't in the sources
+# consulted; the STS value is used as a conservative shared cap. Keys
+# also define which series have wheel-mode support in this tool — SCS
+# has no Work Mode register and SMCL puts it at a different address
+# that this tool doesn't wire up for wheel mode.
+_VELOCITY_MAX_BY_SERIES = {
+	"STS": 3400,
+	"SMBL": 3400,
+}
+WHEEL_MODE_SUPPORTED_SERIES = tuple(_VELOCITY_MAX_BY_SERIES.keys())
+
+
 def SERVO_MODEL(a,b):
 	return (b << 8) + a
 
@@ -277,6 +354,25 @@ def getModelSeries(name):
 		else "SMCL"
 
 
+def reg_work_mode_for_series(series):
+	return _REG_WORK_MODE_BY_SERIES.get(series)
+
+
+def reg_lock_for_series(series):
+	return _REG_LOCK_BY_SERIES.get(series)
+
+
+def position_max_for_series(series):
+	return _POSITION_MAX_BY_SERIES.get(series, DEFAULT_POSITION_MAX)
+
+
+def velocity_max_for_series(series):
+	# Falls back to a conservative cap for any unrecognised series;
+	# wheel-mode UI is gated on WHEEL_MODE_SUPPORTED_SERIES so this
+	# fallback isn't hit in practice.
+	return _VELOCITY_MAX_BY_SERIES.get(series, 1000)
+
+
 class Servo:
 
 	def __init__(self, bus):
@@ -297,9 +393,70 @@ class Servo:
 		return self.bus_.write_byte(id, 40, enable)
 	
 
-	def rotation_mode(self, id):
-		return self.bus_.write_byte(id, 33, 0)
-	
+	def set_position_mode(self, id, series):
+		# Assert standard position mode with default position-range limits.
+		# Read-before-write means this is a no-op when already correct.
+		# series is caller-provided because Servo() instances used as
+		# proto handlers don't carry the model state themselves.
+		return self.apply_mode_config(id, series, WORK_MODE_POSITION, POSITION_MIN, position_max_for_series(series))
+
+
+	def read_work_mode(self, id, series):
+		reg = reg_work_mode_for_series(series)
+		if reg is None:
+			return None
+		return self.bus_.read_byte(id, reg)
+
+
+	def apply_mode_config(self, id, series, target_mode, target_min_limit, target_max_limit):
+		# Read current EPROM values and only write the registers that differ,
+		# skipping the unlock/lock dance entirely when nothing needs to change.
+		# Position-limit targets must be non-negative: read_word/write_word
+		# pass raw 16-bit values through, but the position limit registers
+		# are sign-magnitude (bit 15 = sign), so a negative target would
+		# need to be encoded before comparing against the raw read.
+		work_mode_reg = reg_work_mode_for_series(series)
+		lock_reg = reg_lock_for_series(series)
+		if work_mode_reg is None or lock_reg is None:
+			# Unknown series — refuse to touch unknown register addresses.
+			return False
+		current_mode = self.bus_.read_byte(id, work_mode_reg)
+		current_min = self.bus_.read_word(id, REG_MIN_POSITION_LIMIT)
+		current_max = self.bus_.read_word(id, REG_MAX_POSITION_LIMIT)
+		if current_mode is None or current_min is None or current_max is None:
+			return False
+		needs_mode = current_mode != target_mode
+		needs_min = current_min != target_min_limit
+		needs_max = current_max != target_max_limit
+		if not (needs_mode or needs_min or needs_max):
+			return True
+		self.bus_.write_byte(id, lock_reg, 0)
+		if needs_min:
+			self.bus_.write_word(id, REG_MIN_POSITION_LIMIT, target_min_limit)
+		if needs_max:
+			self.bus_.write_word(id, REG_MAX_POSITION_LIMIT, target_max_limit)
+		if needs_mode:
+			self.bus_.write_byte(id, work_mode_reg, target_mode)
+		self.bus_.write_byte(id, lock_reg, 1)
+		return True
+
+
+	def set_wheel_mode(self, id, series):
+		# Zeroing both position limits puts the firmware in multi-turn /
+		# wheel mode interpretation regardless of work mode value; pairing
+		# it with WORK_MODE_WHEEL switches velocity control on.
+		return self.apply_mode_config(id, series, WORK_MODE_WHEEL, 0, 0)
+
+
+	def exit_wheel_mode(self, id, series):
+		return self.apply_mode_config(id, series, WORK_MODE_POSITION, POSITION_MIN, position_max_for_series(series))
+
+
+	def write_velocity(self, id, velocity, acc):
+		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
+		res, error = handler.WriteSpec(id, velocity, acc)
+		return res
+
 
 	def write_pos(self, id, goal, time, speed):
 		# TODO: implement?
@@ -338,6 +495,13 @@ class Servo:
 	
 
 	def read_position(self, id):
+		# The reported value shifts by the Position Offset Value (EPROM
+		# register 31) when toggling between position mode and wheel mode
+		# on the same servo, with no physical motion. The firmware applies
+		# that offset in position mode but reports raw encoder counts in
+		# wheel mode (limits zeroed → multi-turn). Default offset is 0;
+		# factory variance and the one-key midpoint-calibration feature can
+		# both leave non-zero values in EPROM.
 		#return self.bus_.read_word(id, 56)
 		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
 		pos, res, error = handler.ReadPos(id)
@@ -382,3 +546,11 @@ class Servo:
 	
 	def read_goal(self, id):
 		return self.bus_.read_word(id, 42) or 0
+
+
+	def read_goal_velocity(self, id):
+		handler = scservo_sdk.sms_sts(self.bus_.port_handler_)
+		val, res, error = handler.read2ByteTxRx(id, REG_GOAL_VELOCITY)
+		if 0 == res:
+			return handler.scs_tohost(val, 15)
+		return 0
